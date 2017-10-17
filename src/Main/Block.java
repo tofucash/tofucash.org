@@ -22,7 +22,7 @@ public class Block implements Externalizable {
 	static void init() {
 		Log.log("Block init done.");
 	}
-	Block() {		
+	public Block() {		
 		blockHeight = 0;
 		nonce = null;
 		miner = null;

@@ -15,14 +15,12 @@ import net.arnx.jsonic.JSON;
 
 public class Transaction implements Externalizable {
 	// p117
-	private static final int TRANSACTION_HASH_LENGTH = 512;
-
-	private static final long serialVersionUID = 8531245739641223373L;
+	private static final long serialVersionUID = 19960331104L;
 	
 	private List<Input> in;
 	private List<Output> out;
-	private Question q;
 	private int version = 0;
+	private int locktime = 0;
 	static void init() {
 		Log.log("Transaction init done.");
 	}
@@ -30,7 +28,6 @@ public class Transaction implements Externalizable {
 	public Transaction() {
 		in = new ArrayList<Input>();
 		out = new ArrayList<Output>();
-		q = new Question();
 	}
 	
 
@@ -52,11 +49,6 @@ public class Transaction implements Externalizable {
 			} else {
 				return null;
 			}
-			if (map.containsKey("question") && ((List)map.get("question")).size() > 0) {
-				tx.q = (Question) map.get("question");
-			} else {
-				return null;
-			}
 		} catch (ClassCastException e) {
 			// JSON.decode(json) --X--> Map
 			// map.get("") --X--> List
@@ -75,7 +67,7 @@ public class Transaction implements Externalizable {
 			input = it.next();
 			outTx = Blockchain.getOutTransaction(input.outBlockHeight, input.outTxHash);
 			output = outTx.out.get(input.outIndex);
-			if(Question.isCorrect(tx.q, input.answer)) {
+			if(Question.isCorrect(output.question, input.answer)) {
 				sum += output.amount; 
 			} else {
 				it.remove();
@@ -101,16 +93,56 @@ public class Transaction implements Externalizable {
 	}
 
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
-        System.out.println("version: " + oi.readObject());
-        System.out.println((String)oi.readObject());
+		try {
+        byte[] inByte = null;
+        byte[] outByte = null;
+        int inSize = 0, outSize = 0;
+		System.out.println("tx read");
+		version = oi.readInt();
+        System.out.println("version: " + version);
+        
+        inSize = oi.readInt();
+        System.out.println("inSize: " + inSize);
+        inByte = new byte[inSize];
+        oi.read(inByte, 0, inSize);
+        in = Library.getListByByte(inByte);
+        System.out.println("in:" + in);
+
+        outSize = oi.readInt();
+        System.out.println("outSize: " + outSize);
+        outByte = new byte[outSize];
+        oi.read(outByte, 0, outSize);
+        out = Library.getListByByte(outByte);
+        System.out.println("out:" + out);
+        
+        
+//        System.out.println("out");
+//        oi.read(outByte);
+//        out = Library.getListByByte(outByte);
+//        locktime = oi.readInt();
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
-        oo.writeObject(Constant.Transaction.VERSION);
-        oo.writeObject("XX hidden XX");
+		System.out.println("tx write");
+        oo.writeInt(Constant.Transaction.VERSION);
+        byte[] inByte = Library.getByteObject(in);
+        byte[] outByte = Library.getByteObject(out);
+        oo.writeInt(inByte.length);
+        oo.write(inByte);
+        oo.writeInt(outByte.length);
+        oo.write(outByte);
+        oo.writeInt(locktime);
 	}
 	public String toString() {
 		return ""+version;
+	}
+	
+	void test() {
+		in.add(new Input());
+		out.add(new Output());
 	}
 }
 class Input {
@@ -119,9 +151,22 @@ class Input {
 	int outIndex;
 	int answerSize;
 	Answer answer;
+	public Input() {
+		outBlockHeight = 0;
+		outTxHash = new byte[Constant.Transaction.TRANSACTION_HASH_LENGTH];
+		outIndex = 0;
+		answerSize = 1;
+		answer = new Answer();
+	}
 }
 class Output {
 	int amount;
-	int scriptSize;
-	byte[] script;
+	int questionSize;
+	Question question;
+	public Output() {
+		amount = 0;
+		questionSize = 0;
+		question = new Question();
+	}
 }
+

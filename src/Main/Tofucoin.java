@@ -49,13 +49,13 @@ public class Tofucoin {
 			byte[] data = null;
 			OutputStream os = null;
 			Transaction tx = new Transaction();
+//			tx.test();
 			Block block = new Block();
 			block.setBlockHeight(555);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, block);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.TX, tx);
 			try {
 				// オブジェクトをバイト配列化
 				oos = new ObjectOutputStream(baos);
-				System.out.println("send: "+block.toString());
 				oos.writeObject(no);
 				data = baos.toByteArray();
 
@@ -90,6 +90,7 @@ public class Tofucoin {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		System.exit(0);
 	}
 
 	private static void init() {

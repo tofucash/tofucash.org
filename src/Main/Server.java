@@ -69,7 +69,7 @@ public class Server extends Thread {
 						available = is.available();
 						Thread.sleep(100);
 					} while (available == 0);
-					byte[] data = new byte[is.available()];
+					byte[] data = new byte[available];
 					is.read(data, 0, is.available());
 					// バイト配列をオブジェクトに復元
 					System.out.println("server available: " + available);

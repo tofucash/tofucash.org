@@ -9,6 +9,8 @@ public class Constant {
 		static final int OUTPUT_IS_NOT_ENOUGH = -1;
 		
 		static final int VERSION = 1;
+		static final int TRANSACTION_HASH_LENGTH = 512;
+
 	}
 	class Server {
 	}

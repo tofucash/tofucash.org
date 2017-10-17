@@ -7,29 +7,43 @@ import java.io.ObjectOutput;
 
 public class NetworkObject implements Externalizable{
 	private int type;
-	private Object data;
-	
-	public NetworkObject(int type, Object object) {
+	private Transaction tx;
+	private Block block;
+	public NetworkObject() {
 		
+	}
+	public NetworkObject(int type, Object data) {
+		this.type = type;
+		if(type == Constant.NetworkObject.TX) {
+			tx = (Transaction) data;
+			block = null;
+		} else if(type == Constant.NetworkObject.BLOCK) {
+			block = (Block) data;
+			tx = null;
+		}
 	}
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
-		type = oi.readInt();
-		if (type == Constant.NetworkObject.BLOCK) {
-			System.out.println("block read");
-			int blockHeight = (int) oi.readObject();
-			System.out.println("--blockHeight: " + blockHeight);
-		} else if (type == Constant.NetworkObject.TX) {
-	        System.out.println("version: " + oi.readObject());
-	        System.out.println((String)oi.readObject());
+		System.out.println("networkObject read");
+		type = (int)oi.readObject();
+		System.out.println("readInt: "+type);
+		if(type == Constant.NetworkObject.TX) {
+			tx = (Transaction)oi.readObject();
+		} else if(type == Constant.NetworkObject.BLOCK) {
+			block = (Block) oi.readObject();
 		}
-
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
+		System.out.println("networkObject write");
+		System.out.println("type: " + type);
 		oo.writeObject(type);
-		oo.writeObject(data);
+		if(type == Constant.NetworkObject.TX) {
+			oo.writeObject(tx);
+		} else if(type == Constant.NetworkObject.BLOCK) {
+			oo.writeObject(block);			
+		}
 	}
 }

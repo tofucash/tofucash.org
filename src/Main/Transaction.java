@@ -1,12 +1,18 @@
 package Main;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +25,8 @@ public class Transaction implements Externalizable {
 	
 	private List<Input> in;
 	private List<Output> out;
+	private Input[] ina;
+	private Output[] outa;
 	private int version = 0;
 	private int locktime = 0;
 	static void init() {
@@ -28,36 +36,38 @@ public class Transaction implements Externalizable {
 	public Transaction() {
 		in = new ArrayList<Input>();
 		out = new ArrayList<Output>();
+		ina = new Input[Constant.Transaction.MAX_INPUT_OUTPUT];
+		outa = new Output[Constant.Transaction.MAX_INPUT_OUTPUT];
 	}
 	
 
-	static Transaction checkTransaction(String json) {
-		Transaction tx = new Transaction();
-		try {
-			Map map = (Map) JSON.decode(json);
-			if (map.containsKey("type") && map.get("type").equals("transaction")) {
-			} else {
-				return null;
-			}
-			if (map.containsKey("in") && ((List) map.get("in")).size() > 0) {
-				tx.in = (List) map.get("in");
-			} else {
-				return null;
-			}
-			if (map.containsKey("out") && ((List)map.get("out")).size() > 0) {
-				tx.out = (List) map.get("out");
-			} else {
-				return null;
-			}
-		} catch (ClassCastException e) {
-			// JSON.decode(json) --X--> Map
-			// map.get("") --X--> List
-			return null;
-		}
-
-		return tx;
-	}
-	
+//	static Transaction checkTransaction(String json) {
+//		Transaction tx = new Transaction();
+//		try {
+//			Map map = (Map) JSON.decode(json);
+//			if (map.containsKey("type") && map.get("type").equals("transaction")) {
+//			} else {
+//				return null;
+//			}
+//			if (map.containsKey("in") && ((List) map.get("in")).size() > 0) {
+//				tx.in = (List) map.get("in");
+//			} else {
+//				return null;
+//			}
+//			if (map.containsKey("out") && ((List)map.get("out")).size() > 0) {
+//				tx.out = (List) map.get("out");
+//			} else {
+//				return null;
+//			}
+//		} catch (ClassCastException e) {
+//			// JSON.decode(json) --X--> Map
+//			// map.get("") --X--> List
+//			return null;
+//		}
+//
+//		return tx;
+//	}
+//	
 	static int checkInList(Transaction tx) {
 		int sum = 0;
 		Input input;
@@ -84,7 +94,7 @@ public class Transaction implements Externalizable {
 		return sum; 
 	}
 	
-	static int getSumOut(List<Output> list) {
+	private static int getSumOut(List<Output> list) {
 		int sum = 0;
 		for(Iterator<Output> it = list.iterator(); it.hasNext(); ) {
 			sum += it.next().amount;
@@ -93,7 +103,6 @@ public class Transaction implements Externalizable {
 	}
 
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
-		try {
         byte[] inByte = null;
         byte[] outByte = null;
         int inSize = 0, outSize = 0;
@@ -105,37 +114,46 @@ public class Transaction implements Externalizable {
         System.out.println("inSize: " + inSize);
         inByte = new byte[inSize];
         oi.read(inByte, 0, inSize);
-        in = Library.getListByByte(inByte);
-        System.out.println("in:" + in);
+        ina = (Input[]) getObjectArray(inByte);
+        System.out.println("ina:" + Arrays.toString(ina));
 
         outSize = oi.readInt();
         System.out.println("outSize: " + outSize);
         outByte = new byte[outSize];
         oi.read(outByte, 0, outSize);
-        out = Library.getListByByte(outByte);
-        System.out.println("out:" + out);
+        outa = (Output[]) getObjectArray(outByte);
+        System.out.println("outa:" + Arrays.toString(outa));
         
-        
-//        System.out.println("out");
-//        oi.read(outByte);
-//        out = Library.getListByByte(outByte);
-//        locktime = oi.readInt();
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
+        locktime = oi.readInt();
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		System.out.println("tx write");
         oo.writeInt(Constant.Transaction.VERSION);
-        byte[] inByte = Library.getByteObject(in);
-        byte[] outByte = Library.getByteObject(out);
+        byte[] inByte = Library.getByteObject(ina);
+        byte[] outByte = Library.getByteObject(outa);
         oo.writeInt(inByte.length);
         oo.write(inByte);
         oo.writeInt(outByte.length);
         oo.write(outByte);
         oo.writeInt(locktime);
 	}
+		
+	private static Object[] getObjectArray(byte[] objByte)
+	{
+		Object[] obj = new Object[Constant.Transaction.MAX_INPUT_OUTPUT];
+		try {
+	      ByteArrayInputStream byteis = new ByteArrayInputStream(objByte);
+	      ObjectInputStream objis = new ObjectInputStream(byteis);
+	      obj = (Object[])objis.readObject();
+	      byteis.close();
+	      objis.close();
+	  } catch (Exception e) {
+	      e.printStackTrace();
+	  }
+	  return obj;
+	}
+
 	public String toString() {
 		return ""+version;
 	}
@@ -143,9 +161,11 @@ public class Transaction implements Externalizable {
 	void test() {
 		in.add(new Input());
 		out.add(new Output());
+		ina[0] = new Input();
+		outa[0] = new Output();
 	}
 }
-class Input {
+class Input implements Externalizable{
 	int outBlockHeight;
 	byte[] outTxHash;
 	int outIndex;
@@ -158,8 +178,27 @@ class Input {
 		answerSize = 1;
 		answer = new Answer();
 	}
+	@Override
+	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
+		outBlockHeight = (int)oi.read();
+		outTxHash = (byte[])oi.readObject();
+		outIndex = (int)oi.read();
+		answerSize = (int)oi.read();
+		answer = (Answer)oi.readObject();
+	}
+	@Override
+	public void writeExternal(ObjectOutput oo) throws IOException {
+		oo.write(outBlockHeight);
+		oo.writeObject(outTxHash);
+		oo.write(outIndex);
+		oo.write(answerSize);
+		oo.writeObject(answer);
+	}
+	public String toString() {
+		return "[outBlockHeight: "+outBlockHeight+", outTxHash: "+new String(outTxHash).substring(0, 7)+"..., outIndex: "+outIndex+", answerSize: "+answerSize+", answer: "+answer.toString()+"]";
+	}
 }
-class Output {
+class Output implements Externalizable{
 	int amount;
 	int questionSize;
 	Question question;
@@ -167,6 +206,22 @@ class Output {
 		amount = 0;
 		questionSize = 0;
 		question = new Question();
+	}
+	@Override
+	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
+		amount = (int)oi.read();
+		questionSize = (int)oi.read();
+		question = (Question)oi.readObject();
+	}
+	@Override
+	public void writeExternal(ObjectOutput oo) throws IOException {
+		oo.write(amount);
+		oo.write(questionSize);
+		oo.writeObject(question);
+	}
+	
+	public String toString() {
+		return "[amount: "+amount+", questionSize: "+questionSize+", question: "+question.toString()+"]";
 	}
 }
 

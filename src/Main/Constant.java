@@ -10,6 +10,8 @@ public class Constant {
 		
 		static final int VERSION = 1;
 		static final int TRANSACTION_HASH_LENGTH = 512;
+		
+		static final int MAX_INPUT_OUTPUT = 31;
 
 	}
 	class Server {

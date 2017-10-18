@@ -3,6 +3,7 @@ package Main;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InvalidClassException;
@@ -51,10 +52,11 @@ public class Server extends Thread {
 			Transaction tx = null;
 			Block block = null;
 			InputStream is;
+			InputStreamReader isr = null;
 			NetworkObject no = null;
 			BufferedReader br = null;
 			PrintWriter pw = null;
-			int available;
+			ByteArrayOutputStream baos = null;
 
 			try {
 				br = new BufferedReader(new InputStreamReader(sc.getInputStream()));
@@ -65,19 +67,21 @@ public class Server extends Thread {
 			while (true) {
 				try {
 					is = sc.getInputStream();
-					do {
-						available = is.available();
-						Thread.sleep(100);
-					} while (available == 0);
-					byte[] data = new byte[available];
-					is.read(data, 0, is.available());
-					// バイト配列をオブジェクトに復元
-					System.out.println("server available: " + available);
-					ByteArrayInputStream b = new ByteArrayInputStream(data);
-					ObjectInputStream o = new ObjectInputStream(b);
-					no = (NetworkObject) o.readObject();
-					pw.println("recept!");
-					pw.flush();
+					isr = new InputStreamReader(is);
+					baos = new ByteArrayOutputStream();
+					byte[] buffer = new byte[8192];
+					int readBytes = -1;
+					byte[] data;
+
+					if ((readBytes = is.read(buffer)) > 1) {
+						baos.write(buffer, 0, readBytes);
+						data = baos.toByteArray();
+						ByteArrayInputStream b = new ByteArrayInputStream(data);
+						ObjectInputStream o = new ObjectInputStream(b);
+						no = (NetworkObject) o.readObject();
+						pw.println("recept!");
+						pw.flush();
+					}
 					br.close();
 					pw.close();
 				} catch (Exception e) {
@@ -96,21 +100,15 @@ public class Server extends Thread {
 
 				}
 			}
-			System.out.println("recept: " + tx);
-			System.out.println("recept: " + block);
-			json = new String("");
-			tx = Transaction.checkTransaction(json);
-			if (tx != null) {
-				Blockchain.addTransaction(tx);
+			if (no.getType() == Constant.NetworkObject.TX) {
+				Blockchain.addTransaction(no.getTx());
 				return;
-			}
-			block = Block.checkBlock(json);
-			if (block != null) {
-				Blockchain.addBlock(block);
+			} else if (no.getType() == Constant.NetworkObject.BLOCK) {
+				Blockchain.addBlock(no.getBlock());
 				return;
 			}
 			Log.log("Recept invalid data.", Constant.Log.INVALID);
-			Log.log(json, Constant.Log.INVALID);
+			Log.log(no.toString(), Constant.Log.INVALID);
 		}
 
 		private class RamdomStrings {

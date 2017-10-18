@@ -43,13 +43,14 @@ public class Tofucoin {
 		try {
 			InetSocketAddress socketAddress = new InetSocketAddress("0.0.0.0", 8081);
 			socket.connect(socketAddress, 30000);
-
+			System.out.println("buffersize: " + socket.getSendBufferSize());
+			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			ObjectOutputStream oos = null;
 			byte[] data = null;
 			OutputStream os = null;
 			Transaction tx = new Transaction();
-//			tx.test();
+			tx.test();
 			Block block = new Block();
 			block.setBlockHeight(555);
 			NetworkObject no = new NetworkObject(Constant.NetworkObject.TX, tx);

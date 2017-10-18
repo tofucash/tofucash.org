@@ -6,7 +6,6 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class Answer implements Externalizable{
-	int size = 0;
 	public Answer() {
 		
 	}

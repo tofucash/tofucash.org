@@ -173,7 +173,7 @@ class Input implements Externalizable{
 	Answer answer;
 	public Input() {
 		outBlockHeight = 0;
-		outTxHash = new byte[Constant.Transaction.TRANSACTION_HASH_LENGTH];
+		outTxHash = new byte[Constant.Transaction.BYTE_TX_HASH];
 		outIndex = 0;
 		answerSize = 1;
 		answer = new Answer();

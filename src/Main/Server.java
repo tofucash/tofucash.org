@@ -107,8 +107,8 @@ public class Server extends Thread {
 				Blockchain.addBlock(no.getBlock());
 				return;
 			}
-			Log.log("Recept invalid data.", Constant.Log.INVALID);
-			Log.log(no.toString(), Constant.Log.INVALID);
+			Log.log("Recept invalid data.", Constant.Log.EXCEPTION);
+			Log.log(no.toString(), Constant.Log.EXCEPTION);
 		}
 
 		private class RamdomStrings {

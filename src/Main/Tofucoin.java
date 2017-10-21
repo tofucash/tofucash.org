@@ -10,6 +10,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.KeyPair;
+
+import javax.xml.bind.DatatypeConverter;
 
 public class Tofucoin {
 	public static void main(String[] args) {
@@ -20,11 +23,20 @@ public class Tofucoin {
 		for (int i = 0; i < 8; i++)
 			System.out.println("\u001b[00;4" + i + "m esc[00;4" + i + " \u001b[00m");
 		Log.log("IMPORTANT", Constant.Log.IMPORTANT);
-		Log.log("INVALID", Constant.Log.INVALID);
+		Log.log("EXCEPTION", Constant.Log.EXCEPTION);
 		Log.log("TEMPORARY", Constant.Log.TEMPORARY);
 		Server server = null;
 
 		init();
+		byte[] privateKey = Address.createPrivateKey();
+		System.out.println("privateKey: " + DatatypeConverter.printHexBinary(privateKey));
+		
+		KeyPair kp = Address.createPublicKey();
+		System.out.println("privateKey: " + DatatypeConverter.printHexBinary(kp.getPrivate().getEncoded()));
+		System.out.println("publicKey: " + DatatypeConverter.printHexBinary(kp.getPublic().getEncoded()));
+
+		System.exit(0);
+		
 		server = new Server();
 		server.start();
 
@@ -44,7 +56,7 @@ public class Tofucoin {
 			InetSocketAddress socketAddress = new InetSocketAddress("0.0.0.0", 8081);
 			socket.connect(socketAddress, 30000);
 			System.out.println("buffersize: " + socket.getSendBufferSize());
-			
+
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			ObjectOutputStream oos = null;
 			byte[] data = null;
@@ -52,8 +64,7 @@ public class Tofucoin {
 			Transaction tx = new Transaction();
 			tx.test();
 			Block block = new Block();
-			block.setBlockHeight(555);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.TX, tx);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, block);
 			try {
 				// オブジェクトをバイト配列化
 				oos = new ObjectOutputStream(baos);
@@ -95,8 +106,8 @@ public class Tofucoin {
 	}
 
 	private static void init() {
-
 		Log.init();
+		Setting.init();
 		Blockchain.init();
 
 		Log.loghr("Tofucoin init completed.");

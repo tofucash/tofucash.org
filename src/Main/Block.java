@@ -10,84 +10,47 @@ import java.util.Map;
 import net.arnx.jsonic.JSON;
 
 public class Block implements Externalizable {
-	private final static int NONCE_LENGTH = 512; 
+	private final static int NONCE_LENGTH = 512;
 	private final static int WALLET_LENGTH = 512;
 	
-	private int blockHeight;
-	private byte[] nonce;
-	private byte[] miner;
-	private List tx;
+	private static byte[] myAddr;
 
-	
+	private BlockHeader header;
+	private int txCnt;
+	private Transaction[] txList;
+
 	static void init() {
 		Log.log("Block init done.");
 	}
-	public Block() {		
-		blockHeight = 0;
-		nonce = null;
-		miner = null;
-		tx = null;
+
+	public Block() {
+		byte[] timestamp = new byte[Constant.BYTE_TIMESTAMP];
+		header = new BlockHeader(Constant.BlockHeader.VERSION, new byte[Constant.Block. BYTE_BLOCK_HASH], timestamp, new byte[Constant.Block.BYTE_NONCE], Setting.getMyAddr());
+		txCnt = 0;
+		txList = new Transaction[Constant.Block.MAX_TX];
 	}
-	void setBlockHeight(int blockHeight) {
-		this.blockHeight = blockHeight;
-	}
-	static Block checkBlock(String json) {
-		Block block = new Block();
-		try {
-			Map map = (Map) JSON.decode(json);
-			if (map.containsKey("type") && map.get("type").equals("block")) {
-			} else {
-				return null;
-			}
-			if (map.containsKey("header") && ((Map)map.get("header")).size() > 0) {
-				Map header = (Map) map.get("header");
-				if(header.containsKey("blockHeight") && ((int) header.get("blockHeight")) >= Blockchain.getForkableBlockHeight()) {
-					block.blockHeight = ((int) header.get("blockHeight"));
-				} else {
-					return null;
-				}
-				if(header.containsKey("nonce") && ((byte[]) header.get("nonce")).length == NONCE_LENGTH) {
-					block.nonce = (byte[]) header.get("nonce");
-				} else {
-					return null;
-				}
-				if(header.containsKey("miner") && ((byte[]) header.get("miner")).length == WALLET_LENGTH) {
-					block.miner = ((byte[]) header.get("miner"));
-				} else {
-					return null;
-				}
-			} else {
-				return null;
-			}
-			if (map.containsKey("tx") && ((List) map.get("tx")).size() >= 0) {
-				block.tx = (List) map.get("tx");
-			} else {
-				return null;
-			}
-		} catch (ClassCastException e) {
-			// JSON.decode(json) --X--> Map
-			// map.get("") --X--> List/Map
-			return null;
-		}
-		return block;
-	}
+
 	synchronized boolean addTransaction(Transaction tx) {
 		double inSum = Transaction.checkInList(tx);
 		double outSum = Transaction.checkOutList(tx);
+		txCnt++;
 		return true;
 	}
+
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		System.out.println("block read");
-		blockHeight = (int) oi.readObject();
-		System.out.println("--blockHeight: " + blockHeight);
+		header = (BlockHeader) oi.readObject();
 	}
+
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		System.out.println("block write");
-		oo.writeObject(blockHeight);
+		oo.writeObject(header);
+		oo.writeObject(txList);
 	}
+
 	public String toString() {
-		return "blockHeight: "+ blockHeight;
+		return "[header: " + header.toString() + ", txList: " + txList.toString() + "]";
 	}
 }

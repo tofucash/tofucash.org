@@ -12,6 +12,11 @@ public class Constant {
 		static final int BYTE_ADDRESS = 20;
 		static final int BYTE_PRIVATE_KEY = 512;
 	}
+	class Blockchain {
+		private Blockchain() {}
+		static final int SAVE_FILE_PER_DIR = 1000;
+		static final int MAX_PREV_BLOCK_HASH_LIST = 6;
+	}
 	class BlockHeader {
 		private BlockHeader() {}
 		static final int VERSION = 1;

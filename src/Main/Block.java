@@ -36,6 +36,9 @@ public class Block implements Externalizable {
 		txCnt++;
 		return true;
 	}
+	byte[] getPrevBlockHash() {
+		return header.getPrevBlockHash();
+	}
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {

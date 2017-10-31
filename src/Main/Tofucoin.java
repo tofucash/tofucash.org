@@ -14,6 +14,8 @@ import java.security.KeyPair;
 
 import javax.xml.bind.DatatypeConverter;
 
+import com.sun.javafx.runtime.SystemProperties;
+
 public class Tofucoin {
 	public static void main(String[] args) {
 		// 文字色を変える
@@ -28,14 +30,14 @@ public class Tofucoin {
 		Server server = null;
 
 		init();
-		byte[] privateKey = Address.createPrivateKey();
-		System.out.println("privateKey: " + DatatypeConverter.printHexBinary(privateKey));
-		
-		KeyPair kp = Address.createPublicKey();
-		System.out.println("privateKey: " + DatatypeConverter.printHexBinary(kp.getPrivate().getEncoded()));
-		System.out.println("publicKey: " + DatatypeConverter.printHexBinary(kp.getPublic().getEncoded()));
+//		byte[] privateKey = Address.createPrivateKey();
+//		System.out.println("privateKey: " + DatatypeConverter.printHexBinary(privateKey));
+//		
+//		KeyPair kp = Address.createPublicKey();
+//		System.out.println("privateKey: " + DatatypeConverter.printHexBinary(kp.getPrivate().getEncoded()));
+//		System.out.println("publicKey: " + DatatypeConverter.printHexBinary(kp.getPublic().getEncoded()));
 
-		System.exit(0);
+//		System.exit(0);
 		
 		server = new Server();
 		server.start();
@@ -46,14 +48,14 @@ public class Tofucoin {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		access();
+		access_test();
 	}
 
-	static void access() {
+	static void access_test() {
 		Socket socket = new Socket();
 
 		try {
-			InetSocketAddress socketAddress = new InetSocketAddress("0.0.0.0", 8081);
+			InetSocketAddress socketAddress = new InetSocketAddress("0.0.0.0", Constant.Server.SERVER_PORT);
 			socket.connect(socketAddress, 30000);
 			System.out.println("buffersize: " + socket.getSendBufferSize());
 
@@ -63,8 +65,8 @@ public class Tofucoin {
 			OutputStream os = null;
 			Transaction tx = new Transaction();
 			tx.test();
-			Block block = new Block();
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, block);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, Blockchain.getBlock());
+			Blockchain.addTransaction(tx);
 			try {
 				// オブジェクトをバイト配列化
 				oos = new ObjectOutputStream(baos);
@@ -95,14 +97,17 @@ public class Tofucoin {
 			// クローズ
 			baos.close();
 			oos.close();
-			br1.close();
+			os.close();
 			ir1.close();
+			br1.close();
+			is1.close();
 
-			socket.close();
+//			socket.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.exit(0);
+		
+		System.out.println("close????????");
 	}
 
 	private static void init() {

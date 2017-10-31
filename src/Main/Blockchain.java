@@ -12,8 +12,8 @@ public class Blockchain {
 	static int blockHeight;
 	private static List<byte[]> prevBlockHashList;
 	static void init() {
-		block = null;
-		blockHeight = 0;
+		block = new Block();
+		blockHeight = 1;
 		prevBlockHashList = new ArrayList<byte[]>();
 		Log.log("Blockchain init done.");
 	}
@@ -22,14 +22,15 @@ public class Blockchain {
 		return blockHeight - FORKABLE_BLOCK_HEIGHT;
 	}
 
-	static void addTransaction(Transaction tx) {
-		block.addTransaction(tx);
+	static boolean addTransaction(Transaction tx) {
+		return block.addTransaction(tx);
 	}
 
 	static void addBlock(Block newBlock) {
 		// check block height (fork)
 		// add to latest block pool
 		// testBlockchain.add(newBlock);
+		System.out.println("addBlock");
 		byte[] prevBlockHash = newBlock.getPrevBlockHash();
 		if(!prevBlockHashList.contains(prevBlockHash)) {
 			prevBlockHashList.add(prevBlockHash);
@@ -37,7 +38,7 @@ public class Blockchain {
 		if(prevBlockHashList.size() >= Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST) {
 			prevBlockHashList.remove(0);
 		}
-		Library.fileWrite(Setting.blockchainBinDir + blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR + blockHeight,
+		Library.fileWrite(Setting.blockchainBinDir + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR) + Constant.Environment.SEPARATOR + blockHeight,
 				Library.getByteObject(newBlock));
 	}
 
@@ -48,6 +49,10 @@ public class Blockchain {
 		// using markle tree
 
 		return tx;
+	}
+	
+	static Block getBlock() {
+		return block;
 	}
 
 }

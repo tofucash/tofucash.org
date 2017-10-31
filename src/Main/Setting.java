@@ -6,8 +6,10 @@ import javax.xml.bind.DatatypeConverter;
 
 import Main.TofuException.*;
 public class Setting {
-	static final String address = "1abcdefabcdefabcdefabcdefabcdef123"; 
-	static final String blockchainBinDir = "./blockchain/";
+	static final String address = "1abcdefabcdefabcdefabcdefabcdef123";
+	
+	static final String blockchainBinDir = System.getProperty("user.dir")+"\\data\\blockchain\\";	// windows
+//	static final String blockchainBinDir = "./data/blockchain/";	// others
 	
 	private static byte[] byteAddress;
 	

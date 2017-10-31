@@ -11,6 +11,14 @@ public class BlockHeader implements Externalizable{
 	private byte[] timestamp;
 	private byte[] nonce;
 	private byte[] miner;
+	
+	public BlockHeader() {
+		version = -1;
+		prevBlockHash = new byte[1];
+		timestamp = new byte[1];
+		nonce = new byte[1];
+		miner = new byte[1];
+	}
 
 	public BlockHeader(int version, byte[] prevBlockHash, byte[] timestamp, byte[] nonce, byte[] miner) {
 		this.version = version;
@@ -26,7 +34,7 @@ public class BlockHeader implements Externalizable{
 	
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
-		version = oi.readInt();
+		version = oi.read();
 		oi.read(prevBlockHash);
 		oi.read(timestamp);
 		oi.read(nonce);
@@ -35,11 +43,15 @@ public class BlockHeader implements Externalizable{
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
-		oo.writeInt(version);
+		oo.write(version);
 		oo.write(prevBlockHash);
 		oo.write(timestamp);
 		oo.write(nonce);
 		oo.write(miner);
+	}
+
+	public String toString() {
+		return "[version: "+version+", prevBlockHash: " + prevBlockHash.toString() + ", timestamp: " + timestamp.toString() + ", nonce: "+nonce.toString()+", miner: "+miner+"]";
 	}
 
 }

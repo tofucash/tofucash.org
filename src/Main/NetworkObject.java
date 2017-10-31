@@ -39,11 +39,11 @@ public class NetworkObject implements Externalizable {
 
 	public String toString() {
 		if (type == Constant.NetworkObject.TX) {
-			return "[type: " + type + ", tx:" + tx + "]";
+			return "[type: " + type + ", tx:" + tx.toString() + "]";
 		} else if (type == Constant.NetworkObject.BLOCK) {
-			return "[type: " + type + ", block: " + block + "]";
+			return "[type: " + type + ", block: " + block.toString() + "]";
 		} else {
-			return "[type: unknown, tx: "+tx+", block: "+block+"]";
+			return "[type: unknown, tx: "+tx.toString()+", block: "+block.toString()+"]";
 		}
 	}
 

@@ -28,11 +28,13 @@ public class Block implements Externalizable {
 		header = new BlockHeader(Constant.BlockHeader.VERSION, new byte[Constant.Block. BYTE_BLOCK_HASH], timestamp, new byte[Constant.Block.BYTE_NONCE], Setting.getMyAddr());
 		txCnt = 0;
 		txList = new Transaction[Constant.Block.MAX_TX];
+		for(int i = 0; i < Constant.Block.MAX_TX; i++) {
+			txList[i] = null;
+		}
 	}
 
 	synchronized boolean addTransaction(Transaction tx) {
-		double inSum = Transaction.checkInList(tx);
-		double outSum = Transaction.checkOutList(tx);
+		txList[txCnt] = tx;
 		txCnt++;
 		return true;
 	}
@@ -44,12 +46,18 @@ public class Block implements Externalizable {
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		System.out.println("block read");
 		header = (BlockHeader) oi.readObject();
+		txCnt = oi.readInt();
+		txList = (Transaction[]) oi.readObject();
+		//		for(int i = 0; i < txCnt; i++) {
+//			txList[i] = (Transaction) oi.readObject();
+//		}
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		System.out.println("block write");
 		oo.writeObject(header);
+		oo.writeInt(txCnt);
 		oo.writeObject(txList);
 	}
 

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InvalidClassException;
@@ -14,6 +15,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Server extends Thread {
@@ -23,7 +26,7 @@ public class Server extends Thread {
 
 	public void run() {
 		try {
-			ServerSocket ss = new ServerSocket(8081);
+			ServerSocket ss = new ServerSocket(Constant.Server.SERVER_PORT);
 			Log.log("Server ready.");
 
 			while (true) {
@@ -33,7 +36,7 @@ public class Server extends Thread {
 				} catch (Exception e) {
 					e.printStackTrace();
 					break;
-				}
+				}				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -57,7 +60,8 @@ public class Server extends Thread {
 			BufferedReader br = null;
 			PrintWriter pw = null;
 			ByteArrayOutputStream baos = null;
-
+			ByteBuffer bbuf = ByteBuffer.allocate(Constant.Server.SERVER_BUF);
+			
 			try {
 				br = new BufferedReader(new InputStreamReader(sc.getInputStream()));
 				pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(sc.getOutputStream())));
@@ -66,32 +70,34 @@ public class Server extends Thread {
 			}
 			while (true) {
 				try {
+					Thread.sleep(1000);
 					is = sc.getInputStream();
 					isr = new InputStreamReader(is);
 					baos = new ByteArrayOutputStream();
 					byte[] buffer = new byte[8192];
 					int readBytes = -1;
 					byte[] data;
-
+					System.out.println("is.available(): " + is.available());
+					if(is.available() <= 0) {
+						break;
+					}
 					if ((readBytes = is.read(buffer)) > 1) {
 						baos.write(buffer, 0, readBytes);
 						data = baos.toByteArray();
-						ByteArrayInputStream b = new ByteArrayInputStream(data);
-						ObjectInputStream o = new ObjectInputStream(b);
-						no = (NetworkObject) o.readObject();
+						bbuf.put(data);
 						pw.println("recept!");
 						pw.flush();
 					}
-					br.close();
-					pw.close();
 				} catch (Exception e) {
 					try {
 						pw.close();
 						br.close();
 						pw.close();
 						sc.close();
-						Log.log("[Exception]: Server", Constant.Log.IMPORTANT);
 						e.printStackTrace();
+						Log.log("[Exception]: Server", Constant.Log.IMPORTANT);
+						
+						
 						break;
 					} catch (Exception ex) {
 						ex.printStackTrace();
@@ -100,7 +106,28 @@ public class Server extends Thread {
 
 				}
 			}
+			try {
+				br.close();
+				pw.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+				Log.log("[Exception]: Server", Constant.Log.EXCEPTION);
+			}
+
+
+			try {
+				ByteArrayInputStream b = new ByteArrayInputStream(bbuf.array());
+				ObjectInputStream o = new ObjectInputStream(b);
+				no = (NetworkObject) o.readObject();
+			} catch (ClassNotFoundException | IOException e) {
+				e.printStackTrace();
+			}
+
+			Library.fileWrite(Setting.blockchainBinDir+(100/Constant.Blockchain.SAVE_FILE_PER_DIR) + "/" + "last.txt", Library.getByteObject(no));
+
+			
 			if (no.getType() == Constant.NetworkObject.TX) {
+				System.out.println("???");
 				Blockchain.addTransaction(no.getTx());
 				return;
 			} else if (no.getType() == Constant.NetworkObject.BLOCK) {

@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
+import javax.xml.bind.DatatypeConverter;
+
 public class BlockHeader implements Externalizable{
 	private int version;
 	private byte[] prevBlockHash;
@@ -51,7 +53,7 @@ public class BlockHeader implements Externalizable{
 	}
 
 	public String toString() {
-		return "[version: "+version+", prevBlockHash: " + prevBlockHash.toString() + ", timestamp: " + timestamp.toString() + ", nonce: "+nonce.toString()+", miner: "+miner+"]";
+		return "[version: "+version+", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash) + ", timestamp: " + DatatypeConverter.printHexBinary(timestamp) + ", nonce: "+DatatypeConverter.printHexBinary(nonce)+", miner: "+DatatypeConverter.printHexBinary(miner)+"]";
 	}
 
 }

@@ -4,6 +4,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Arrays;
 
 public class NetworkObject implements Externalizable {
 	private int type;
@@ -21,6 +22,8 @@ public class NetworkObject implements Externalizable {
 			block = null;
 		} else if (type == Constant.NetworkObject.BLOCK) {
 			block = (Block) data;
+			Transaction[] txList = block.getTxList();
+			block.updateTxList((Transaction[])Arrays.asList(txList).toArray());
 			tx = null;
 		}
 	}
@@ -49,9 +52,7 @@ public class NetworkObject implements Externalizable {
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
-		System.out.println("networkObject read");
 		type = (int) oi.readObject();
-		System.out.println("readInt: " + type);
 		if (type == Constant.NetworkObject.TX) {
 			tx = (Transaction) oi.readObject();
 		} else if (type == Constant.NetworkObject.BLOCK) {
@@ -61,8 +62,6 @@ public class NetworkObject implements Externalizable {
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
-		System.out.println("networkObject write");
-		System.out.println("type: " + type);
 		oo.writeObject(type);
 		if (type == Constant.NetworkObject.TX) {
 			oo.writeObject(tx);

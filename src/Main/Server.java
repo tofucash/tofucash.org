@@ -11,6 +11,7 @@ import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.StreamCorruptedException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -119,10 +120,12 @@ public class Server extends Thread {
 				ByteArrayInputStream b = new ByteArrayInputStream(bbuf.array());
 				ObjectInputStream o = new ObjectInputStream(b);
 				no = (NetworkObject) o.readObject();
-			} catch (ClassNotFoundException | IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 
+			// test
+			System.out.println(no);
 			Library.fileWrite(Setting.blockchainBinDir+(100/Constant.Blockchain.SAVE_FILE_PER_DIR) + "/" + "last.txt", Library.getByteObject(no));
 
 			

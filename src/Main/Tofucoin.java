@@ -64,7 +64,9 @@ public class Tofucoin {
 			byte[] data = null;
 			OutputStream os = null;
 			Transaction tx = new Transaction();
-			tx.test();
+			
+			tx.setTestData();
+			
 			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, Blockchain.getBlock());
 			Blockchain.addTransaction(tx);
 			try {

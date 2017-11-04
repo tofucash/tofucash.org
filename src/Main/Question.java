@@ -5,22 +5,32 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-public class Question implements Externalizable{
+import javax.xml.bind.DatatypeConverter;
+
+public class Question extends Script implements Externalizable{
+	private byte[] script;
 	
-	static boolean isCorrect(Question q, Answer a) {
-		
-		return true;
+	public Question() {
+		script = null;
+	}
+	public Question(byte[] script) {
+		this.script = script;
+	}	
+	byte[] getScript() {
+		return this.script;
 	}
 
 	@Override
-	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		// TODO Auto-generated method stub
-		
+	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
+		oi.read(script);
 	}
 
 	@Override
-	public void writeExternal(ObjectOutput out) throws IOException {
-		// TODO Auto-generated method stub
-		
+	public void writeExternal(ObjectOutput oo) throws IOException {
+		oo.write(script);
 	}
+	public String toString() {
+		return DatatypeConverter.printHexBinary(script);
+	}
+
 }

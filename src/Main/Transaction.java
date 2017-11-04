@@ -20,80 +20,43 @@ import java.util.Map;
 import net.arnx.jsonic.JSON;
 
 public class Transaction implements Externalizable {
-	// p117
 	private static final long serialVersionUID = 19960331104L;
 	
-	private List<Input> in;
-	private List<Output> out;
-	private Input[] ina;
-	private Output[] outa;
+	private Input[] in;
+	private Output[] out;
 	private int version = 0;
-	private int locktime = 0;
+	private int lockTime = 0;
 	static void init() {
 		Log.log("Transaction init done.");
 	}
 
 	public Transaction() {
-		in = new ArrayList<Input>();
-		out = new ArrayList<Output>();
-		ina = new Input[Constant.Transaction.MAX_INPUT_OUTPUT];
-		outa = new Output[Constant.Transaction.MAX_INPUT_OUTPUT];
+		in = new Input[Constant.Transaction.MAX_INPUT_OUTPUT];
+		out = new Output[Constant.Transaction.MAX_INPUT_OUTPUT];
+	}
+	public Transaction(Input[] in, Output[] out, int version, int lockTime) {
+		this.in = in;
+		this.out = out;
+		this.version = version;
+		this.lockTime = lockTime;
+	}
+	Input[] getIn() {
+		return in;
+	}
+	void updateIn(Input[] in) {
+		this.in = in;
+	}
+	Output[] getOut() {
+		return out;
+	}
+	int getVersion() {
+		return version;
+	}
+	int getLockTime() {
+		return lockTime;
 	}
 	
-
-//	static Transaction checkTransaction(String json) {
-//		Transaction tx = new Transaction();
-//		try {
-//			Map map = (Map) JSON.decode(json);
-//			if (map.containsKey("type") && map.get("type").equals("transaction")) {
-//			} else {
-//				return null;
-//			}
-//			if (map.containsKey("in") && ((List) map.get("in")).size() > 0) {
-//				tx.in = (List) map.get("in");
-//			} else {
-//				return null;
-//			}
-//			if (map.containsKey("out") && ((List)map.get("out")).size() > 0) {
-//				tx.out = (List) map.get("out");
-//			} else {
-//				return null;
-//			}
-//		} catch (ClassCastException e) {
-//			// JSON.decode(json) --X--> Map
-//			// map.get("") --X--> List
-//			return null;
-//		}
-//
-//		return tx;
-//	}
-//	
-	static int checkInList(Transaction tx) {
-		int sum = 0;
-		Input input;
-		Output output;
-		Transaction outTx;
-		for(Iterator<Input> it = tx.in.iterator(); it.hasNext(); ) {
-			input = it.next();
-			outTx = Blockchain.getOutTransaction(input.outBlockHeight, input.outTxHash);
-			output = outTx.out.get(input.outIndex);
-			if(Question.isCorrect(output.question, input.answer)) {
-				sum += output.amount; 
-			} else {
-				it.remove();
-			}
-			if(sum >= getSumOut(tx.out)) {
-				return sum;
-			}
-		}
-		return Constant.Transaction.OUTPUT_IS_NOT_ENOUGH; 
-	}
-	static int checkOutList(Transaction tx) {
-		int sum = 0;
 		
-		return sum; 
-	}
-	
 	private static int getSumOut(List<Output> list) {
 		int sum = 0;
 		for(Iterator<Output> it = list.iterator(); it.hasNext(); ) {
@@ -114,29 +77,29 @@ public class Transaction implements Externalizable {
         System.out.println("inSize: " + inSize);
         inByte = new byte[inSize];
         oi.read(inByte, 0, inSize);
-        ina = (Input[]) getObjectArray(inByte);
-        System.out.println("ina:" + Arrays.toString(ina));
+        in = (Input[]) getObjectArray(inByte);
+        System.out.println("ina:" + Arrays.toString(in));
 
         outSize = oi.readInt();
         System.out.println("outSize: " + outSize);
         outByte = new byte[outSize];
         oi.read(outByte, 0, outSize);
-        outa = (Output[]) getObjectArray(outByte);
-        System.out.println("outa:" + Arrays.toString(outa));
+        out = (Output[]) getObjectArray(outByte);
+        System.out.println("outa:" + Arrays.toString(out));
         
-        locktime = oi.readInt();
+        lockTime = oi.readInt();
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		System.out.println("tx write");
         oo.writeInt(Constant.Transaction.VERSION);
-        byte[] inByte = Library.getByteObject(ina);
-        byte[] outByte = Library.getByteObject(outa);
+        byte[] inByte = Library.getByteObject(in);
+        byte[] outByte = Library.getByteObject(out);
         oo.writeInt(inByte.length);
         oo.write(inByte);
         oo.writeInt(outByte.length);
         oo.write(outByte);
-        oo.writeInt(locktime);
+        oo.writeInt(lockTime);
 	}
 		
 	private static Object[] getObjectArray(byte[] objByte)
@@ -155,28 +118,45 @@ public class Transaction implements Externalizable {
 	}
 
 	public String toString() {
-		return ""+version;
+		return "[version: "+version + ", lockTime: " + lockTime + ", Input[]: " + in + ", Output[]: " + out + "]";
 	}
 	
-	void test() {
-		in.add(new Input());
-		out.add(new Output());
-		ina[0] = new Input();
-		outa[0] = new Output();
+	void setTestData() {
+		in[0] = new Input();
+		out[0] = new Output();
 	}
 }
 class Input implements Externalizable{
-	int outBlockHeight;
-	byte[] outTxHash;
-	int outIndex;
-	int answerSize;
-	Answer answer;
+	private int outBlockHeight;
+	private byte[] outTxHash;
+	private int outIndex;
+	private int answerSize;
+	private Answer answer;
 	public Input() {
 		outBlockHeight = 0;
 		outTxHash = new byte[Constant.Transaction.BYTE_TX_HASH];
 		outIndex = 0;
 		answerSize = 1;
 		answer = new Answer();
+	}
+	
+	int getOutBlockHeight() {
+		return outBlockHeight;
+	}
+	byte[] getOutTxHash() {
+		return outTxHash;
+	}
+	int getOutIndex() {
+		return outIndex;
+	}
+	int getAnswerSize() {
+		return answerSize;
+	}
+	Answer getAnswer() {
+		return answer;
+	}
+	void updateAnswer(Answer answer) {
+		this.answer = answer;
 	}
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
@@ -225,3 +205,56 @@ class Output implements Externalizable{
 	}
 }
 
+
+//static Transaction checkTransaction(String json) {
+//Transaction tx = new Transaction();
+//try {
+//	Map map = (Map) JSON.decode(json);
+//	if (map.containsKey("type") && map.get("type").equals("transaction")) {
+//	} else {
+//		return null;
+//	}
+//	if (map.containsKey("in") && ((List) map.get("in")).size() > 0) {
+//		tx.in = (List) map.get("in");
+//	} else {
+//		return null;
+//	}
+//	if (map.containsKey("out") && ((List)map.get("out")).size() > 0) {
+//		tx.out = (List) map.get("out");
+//	} else {
+//		return null;
+//	}
+//} catch (ClassCastException e) {
+//	// JSON.decode(json) --X--> Map
+//	// map.get("") --X--> List
+//	return null;
+//}
+//
+//return tx;
+//}
+//
+//static int checkInList(Transaction tx) {
+//int sum = 0;
+//Input input;
+//Output output;
+//Transaction outTx;
+//for(Iterator<Input> it = tx.in.iterator(); it.hasNext(); ) {
+//	input = it.next();
+//	outTx = Blockchain.getOutTransaction(input.outBlockHeight, input.outTxHash);
+//	output = outTx.out.get(input.outIndex);
+//	if(Script.resolve(output.question, input.answer)) {
+//		sum += output.amount; 
+//	} else {
+//		it.remove();
+//	}
+//	if(sum >= getSumOut(tx.out)) {
+//		return sum;
+//	}
+//}
+//return Constant.Transaction.OUTPUT_IS_NOT_ENOUGH; 
+//}
+//static int checkOutList(Transaction tx) {
+//int sum = 0;
+//
+//return sum; 
+//}

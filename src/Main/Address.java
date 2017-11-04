@@ -15,20 +15,20 @@ public class Address {
 		return false;
 	}
 
-	static byte[] createPrivateKey() {
-		SecureRandom random;
-		try {
-			random = SecureRandom.getInstance("SHA1PRNG");
-			byte token[] = new byte[Constant.Address.BYTE_PRIVATE_KEY];
-			random.nextBytes(token);
-			return token;
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-			throw new TofuException.SettingError("SecureRandom algorithm not found.");
-		}
-	}
+//	static byte[] createPrivateKey() {
+//		SecureRandom random;
+//		try {
+//			random = SecureRandom.getInstance("SHA256withECDSA");
+//			byte token[] = new byte[Constant.Address.BYTE_PRIVATE_KEY];
+//			random.nextBytes(token);
+//			return token;
+//		} catch (NoSuchAlgorithmException e) {
+//			e.printStackTrace();
+//			throw new TofuException.SettingError("SecureRandom algorithm not found.");
+//		}
+//	}
 	
-	static KeyPair createPublicKey() {
+	static KeyPair createKeyPair() {
 		    KeyPairGenerator keyGen = null;
 			try {
 				keyGen = KeyPairGenerator.getInstance("EC");
@@ -36,7 +36,6 @@ public class Address {
 			    keyGen.initialize(ecSpec, new SecureRandom());
 			    return keyGen.generateKeyPair();
 			} catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException  e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				throw new TofuException.SettingError("SecureRandom algorithm not found.");
 			}

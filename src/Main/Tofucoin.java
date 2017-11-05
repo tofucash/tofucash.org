@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.security.KeyPair;
 
 import javax.xml.bind.DatatypeConverter;
@@ -27,6 +28,10 @@ public class Tofucoin {
 		Log.log("IMPORTANT", Constant.Log.IMPORTANT);
 		Log.log("EXCEPTION", Constant.Log.EXCEPTION);
 		Log.log("TEMPORARY", Constant.Log.TEMPORARY);
+		byte[] bytes = ByteBuffer.allocate(4).putInt(12345).array();
+		System.out.println("bytes: "+DatatypeConverter.printHexBinary(bytes));
+		System.out.println("bytes int: "+ByteBuffer.wrap(new byte[] {0x22, 0x21, 0x15, 0x64}).getInt());
+
 		Server server = null;
 
 		init();
@@ -64,9 +69,14 @@ public class Tofucoin {
 			byte[] data = null;
 			OutputStream os = null;
 			Transaction tx = new Transaction();
-			tx.test();
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, Blockchain.getBlock());
+			
+			tx.setTestData();
+			Blockchain.setTestData();
 			Blockchain.addTransaction(tx);
+			
+//			NetworkObject no = new NetworkObject(Constant.NetworkObject.TX, tx);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, Blockchain.getBlock());
+			System.out.println("no: "+no);
 			try {
 				// オブジェクトをバイト配列化
 				oos = new ObjectOutputStream(baos);
@@ -102,12 +112,10 @@ public class Tofucoin {
 			br1.close();
 			is1.close();
 
-//			socket.close();
+			socket.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		System.out.println("close????????");
 	}
 
 	private static void init() {

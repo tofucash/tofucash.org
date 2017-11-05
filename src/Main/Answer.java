@@ -4,19 +4,43 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.nio.ByteBuffer;
 
-public class Answer implements Externalizable{
+import javax.xml.bind.DatatypeConverter;
+
+public class Answer extends Script implements Externalizable {
+	private static final long serialVersionUID = 199603311060000L;
+	private byte[] script;
+
 	public Answer() {
-		
+		script = null;
 	}
-	@Override
-	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		// TODO Auto-generated method stub
-		
+
+	public Answer(byte[] script) {
+		this.script = script;
 	}
+
+	byte[] getScript() {
+		return script;
+	}
+
 	@Override
-	public void writeExternal(ObjectOutput out) throws IOException {
-		// TODO Auto-generated method stub
-		
+	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
+		int readByte = oi.readInt();
+		if(readByte > Constant.Script.BYTE_MAX_ANSWER) {
+			return;
+		}
+		script = new byte[readByte];
+		oi.read(script);
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput oo) throws IOException {
+		oo.writeInt(script.length);
+		oo.write(script);
+	}
+
+	public String toString() {
+		return DatatypeConverter.printHexBinary(script);
 	}
 }

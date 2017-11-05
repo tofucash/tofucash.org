@@ -4,8 +4,14 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 public class NetworkObject implements Externalizable {
+	private static final long serialVersionUID = 199603311030000L;
 	private int type;
 	private Transaction tx;
 	private Block block;
@@ -18,10 +24,18 @@ public class NetworkObject implements Externalizable {
 		this.type = type;
 		if (type == Constant.NetworkObject.TX) {
 			tx = (Transaction) data;
+			tx.removeNull();
 			block = null;
 		} else if (type == Constant.NetworkObject.BLOCK) {
 			block = (Block) data;
 			tx = null;
+			block.removeNull();
+			Iterator<Transaction> it;
+			int i;
+			Transaction[] txList = block.getTxList(); 
+			for(i = 0; i < txList.length; i++) {
+				txList[i].removeNull();
+			}
 		}
 	}
 
@@ -49,9 +63,7 @@ public class NetworkObject implements Externalizable {
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
-		System.out.println("networkObject read");
 		type = (int) oi.readObject();
-		System.out.println("readInt: " + type);
 		if (type == Constant.NetworkObject.TX) {
 			tx = (Transaction) oi.readObject();
 		} else if (type == Constant.NetworkObject.BLOCK) {
@@ -61,8 +73,6 @@ public class NetworkObject implements Externalizable {
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
-		System.out.println("networkObject write");
-		System.out.println("type: " + type);
 		oo.writeObject(type);
 		if (type == Constant.NetworkObject.TX) {
 			oo.writeObject(tx);

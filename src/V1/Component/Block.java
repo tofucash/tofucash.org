@@ -1,4 +1,4 @@
-package Main;
+package V1.Component;
 
 import java.io.ByteArrayInputStream;
 import java.io.Externalizable;
@@ -12,14 +12,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import V1.Library.Constant;
+import V1.Library.Log;
+import V1.TestClient.Setting;
 import net.arnx.jsonic.JSON;
 
 public class Block implements Externalizable {
 	private static final long serialVersionUID = 199603311050000L;
 	private final static int NONCE_LENGTH = 512;
 	private final static int WALLET_LENGTH = 512;
-
-	private static byte[] myAddr;
 
 	private BlockHeader header;
 	private int txCnt;
@@ -32,26 +33,26 @@ public class Block implements Externalizable {
 	public Block() {
 		byte[] timestamp = new byte[Constant.BYTE_TIMESTAMP];
 		header = new BlockHeader(Constant.BlockHeader.VERSION, new byte[Constant.Block.BYTE_BLOCK_HASH], timestamp,
-				new byte[Constant.Block.BYTE_NONCE], Setting.getMyAddr());
+				new byte[Constant.Block.BYTE_NONCE], new byte[Constant.Address.BYTE_ADDRESS]);
 		txCnt = 0;
 		txList = new Transaction[Constant.Block.MAX_TX];
 	}
 
-	synchronized boolean addTransaction(Transaction tx) {
+	public synchronized boolean addTransaction(Transaction tx) {
 		txList[txCnt] = tx;
 		txCnt++;
 		return true;
 	}
 
-	byte[] getPrevBlockHash() {
+	public byte[] getPrevBlockHash() {
 		return header.getPrevBlockHash();
 	}
 
-	Transaction[] getTxList() {
+	public Transaction[] getTxList() {
 		return txList;
 	}
 
-	void removeNull() {
+	public void removeNull() {
 		List<Transaction> txListAsList = new ArrayList<Transaction>(Arrays.asList(txList));
 		txListAsList.removeAll(Collections.singleton(null));
 		txList = txListAsList.toArray(new Transaction[txListAsList.size()]);
@@ -61,7 +62,7 @@ public class Block implements Externalizable {
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		header = (BlockHeader) oi.readObject();
 		txCnt = oi.readInt();
-		System.out.println("txCnt: " + txCnt);
+		Log.log("txCnt: " + txCnt, Constant.Log.TEMPORARY);
 		txList = new Transaction[txCnt];
 		txList = (Transaction[]) oi.readObject();
 //		for(int i = 0; i < txCnt; i++) {
@@ -76,7 +77,7 @@ public class Block implements Externalizable {
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeObject(header);
 		oo.writeInt(txCnt);
-		System.out.println("txCnt: " + txCnt);
+		Log.log("txCnt: " + txCnt, Constant.Log.TEMPORARY);
 //		for (int i = 0; i < txList.length; i++) {
 //			byte[] data = Library.getByteObject(txList[i]);
 //			oo.writeInt(data.length);

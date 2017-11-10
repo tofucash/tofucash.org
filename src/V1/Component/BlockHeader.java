@@ -1,4 +1,4 @@
-package Main;
+package V1.Component;
 
 import java.io.Externalizable;
 import java.io.IOException;

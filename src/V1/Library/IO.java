@@ -1,4 +1,4 @@
-package Main;
+package V1.Library;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -16,8 +16,8 @@ import java.util.List;
 
 import org.omg.CORBA_2_3.portable.InputStream;
 
-public class Library {
-	static byte[] getByteObject(Object data) {
+public class IO {
+	public static byte[] getByteObject(Object data) {
 		byte[] retObject = null;
 		try {
 			ByteArrayOutputStream byteos = new ByteArrayOutputStream();
@@ -32,11 +32,11 @@ public class Library {
 		return retObject;
 	}
 
-	static boolean isDirectory(String dirPath) {
+	public static boolean isDirectory(String dirPath) {
 		return (new File(dirPath)).isDirectory();
 	}
 
-	static void fileWrite(String path, String content) {
+	public static void fileWrite(String path, String content) {
 		try {
 			File file = new File(path);
 			if (!file.exists()) {
@@ -55,7 +55,7 @@ public class Library {
 		}
 	}
 
-	static void fileWrite(String path, byte[] data) {
+	public static void fileWrite(String path, byte[] data) {
 		try {
 			FileOutputStream fos = new FileOutputStream(path);
 			fos.write(data);
@@ -66,7 +66,7 @@ public class Library {
 		}
 	}
 
-	static byte[] readFileToByte(String path) throws Exception {
+	public static byte[] readFileToByte(String path) throws Exception {
 		byte[] b = new byte[1];
 		FileInputStream fis = new FileInputStream(path);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -80,7 +80,7 @@ public class Library {
 		return b;
 	}
 
-	static Object createSendMessageObject(byte[] objByte) {
+	public static Object createSendMessageObject(byte[] objByte) {
 		Object obj = null;
 		try {
 			ByteArrayInputStream byteis = new ByteArrayInputStream(objByte);

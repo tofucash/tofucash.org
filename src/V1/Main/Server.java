@@ -1,4 +1,4 @@
-package Main;
+package V1.Main;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Random;
 
 import javax.xml.bind.DatatypeConverter;
+
+import V1.Component.NetworkObject;
+import V1.Library.Constant;
+import V1.Library.Log;
 
 public class Server extends Thread {
 	void init() {
@@ -67,23 +71,23 @@ public class Server extends Thread {
 				pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(sc.getOutputStream())));
 				while (true) {
 					try {
-						Thread.sleep(1000);
+						Thread.sleep(Constant.Server.SERVER_READ_SLEEP);
 						is = sc.getInputStream();
 						isr = new InputStreamReader(is);
 						baos = new ByteArrayOutputStream();
 						byte[] buffer = new byte[1024];
 						int readBytes = -1;
 						byte[] data;
-						System.out.println("is.available(): " + is.available());
-						if (is.available() <= 0) {
-							break;
-						}
-						if ((readBytes = is.read(buffer)) > 1) {
+						int available = is.available();
+						Log.log("[Client.run()] is.available(): " + available, Constant.Log.TEMPORARY);
+						if (available > 0 && (readBytes = is.read(buffer)) > 1) {
 							baos.write(buffer, 0, readBytes);
 							data = baos.toByteArray();
 							bbuf.put(data);
-							pw.println("recept!");
+							pw.println("Your data is accepted.");
 							pw.flush();
+						} else {
+							break;
 						}
 					} catch (Exception e) {
 						try {
@@ -120,8 +124,8 @@ public class Server extends Thread {
 				e.printStackTrace();
 			}
 			bbuf = null;
-			// test
-			System.out.println("[Client.run()] no: " + no);
+
+			Log.log("[Client.run()] no: " + no, Constant.Log.TEMPORARY);
 
 			if (no.getType() == Constant.NetworkObject.TX) {
 				Blockchain.addTransaction(no.getTx());

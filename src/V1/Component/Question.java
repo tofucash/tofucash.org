@@ -1,4 +1,4 @@
-package Main;
+package V1.Component;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -6,6 +6,9 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 import javax.xml.bind.DatatypeConverter;
+
+import V1.Library.Constant;
+
 
 public class Question extends Script implements Externalizable{
 	private static final long serialVersionUID = 199603311070000L;
@@ -17,7 +20,7 @@ public class Question extends Script implements Externalizable{
 	public Question(byte[] script) {
 		this.script = script;
 	}	
-	byte[] getScript() {
+	public byte[] getScript() {
 		return this.script;
 	}
 

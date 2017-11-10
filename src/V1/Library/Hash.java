@@ -1,4 +1,4 @@
-package Main;
+package V1.Library;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Mac;

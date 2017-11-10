@@ -1,4 +1,4 @@
-package Main;
+package V1.Component;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import V1.Library.Constant;
 
 public class NetworkObject implements Externalizable {
 	private static final long serialVersionUID = 199603311030000L;
@@ -39,15 +41,15 @@ public class NetworkObject implements Externalizable {
 		}
 	}
 
-	int getType() {
+	public int getType() {
 		return type;
 	}
 
-	Transaction getTx() {
+	public Transaction getTx() {
 		return tx;
 	}
 
-	Block getBlock() {
+	public Block getBlock() {
 		return block;
 	}
 

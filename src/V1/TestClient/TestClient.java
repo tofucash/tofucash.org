@@ -2,6 +2,7 @@ package V1.TestClient;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
@@ -18,11 +19,13 @@ import V1.Component.Answer;
 import V1.Component.Block;
 import V1.Component.Input;
 import V1.Component.NetworkObject;
+import V1.Component.Node;
 import V1.Component.Output;
 import V1.Component.Question;
 import V1.Component.Transaction;
 import V1.Library.Address;
 import V1.Library.Base58;
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Constant.Script.OPCode;
 import V1.Library.Crypto;
@@ -36,20 +39,39 @@ public class TestClient {
 
 	public static void main(String[] args) {
 		init();
-//		keyPair = Address.createKeyPair();
-//		System.out.println("private: " + DatatypeConverter.printHexBinary(keyPair.getPrivate().getEncoded()));
-//		System.out.println("public: " + DatatypeConverter.printHexBinary(keyPair.getPublic().getEncoded()));
-//		System.out.println("private: " + keyPair.getPrivate().getEncoded().length);
-//		System.out.println("public: " +keyPair.getPublic().getEncoded().length);
-//		System.out.println("address: " + Base58.encode(Address.getAddress(keyPair.getPublic())));
-//		System.out.println("address: " + Address.getAddress(keyPair.getPublic()).length);
-//		String text = "あいうえalksdfj;1201r-joa;lk3;12-r10opkcmknjkoi429pおあああああfakjl32oあああああああああああ１２３４５";
-//		byte[] sign = Crypto.sign(keyPair.getPrivate(), keyPair.getPublic(), text.getBytes());
-//		System.out.println("sign: " + DatatypeConverter.printHexBinary(sign));
-//		System.out.println("sign length: " + sign.length);
-//		System.out.println("result: " + Crypto.verify(keyPair.getPublic().getEncoded(), text.getBytes(), sign));
-//		System.exit(0);
+		// test1();
+		 test2();
 		accessTest();
+	}
+
+	static void test2() {
+		Node node;
+
+		node = new Node("192.168.56.1", Constant.Server.SERVER_PORT, "test node", Setting.getAddress(), Setting.getKeyPair());
+
+		try {
+			IO.fileWrite(System.getProperty("user.dir") + "\\data\\trustedServer\\test1.conf", ByteUtil.getByteObject(node));
+			Log.log(ByteUtil.convertByteToObject(
+					IO.readFileToByte(System.getProperty("user.dir") + "\\data\\trustedServer\\test1.conf")));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	static void test1() {
+		keyPair = Address.createKeyPair();
+		System.out.println("private: " + DatatypeConverter.printHexBinary(keyPair.getPrivate().getEncoded()));
+		System.out.println("public: " + DatatypeConverter.printHexBinary(keyPair.getPublic().getEncoded()));
+		System.out.println("private: " + keyPair.getPrivate().getEncoded().length);
+		System.out.println("public: " + keyPair.getPublic().getEncoded().length);
+		System.out.println("address: " + Base58.encode(Address.getAddress(keyPair.getPublic())));
+		System.out.println("address: " + Address.getAddress(keyPair.getPublic()).length);
+		String text = "11月には全体が動くようにしたい...";
+		byte[] sign = Crypto.sign(keyPair.getPrivate(), keyPair.getPublic(), text.getBytes());
+		System.out.println("sign: " + DatatypeConverter.printHexBinary(sign));
+		System.out.println("sign length: " + sign.length);
+		System.out.println("result: " + Crypto.verify(keyPair.getPublic().getEncoded(), text.getBytes(), sign));
+		System.exit(0);
 	}
 
 	static void init() {
@@ -90,6 +112,9 @@ public class TestClient {
 			OutputStream os = null;
 			Transaction tx;
 			Block block;
+			Node node;
+
+			node = new Node("192.168.56.1", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
 
 			tx = getTestTransaction();
 			block = new Block();
@@ -97,7 +122,11 @@ public class TestClient {
 
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.TX,
 			// tx);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.BLOCK, block);
+			// NetworkObject no = new
+			// NetworkObject(Constant.NetworkObject.BLOCK, block);
+//			NetworkObject no = new NetworkObject(Constant.NetworkObject.NODE, node);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.HASH, new byte[] {0x01, 0x4a, 0x02});
+			
 			Log.log("no: " + no, Constant.Log.TEMPORARY);
 			try {
 				oos = new ObjectOutputStream(baos);
@@ -140,14 +169,19 @@ public class TestClient {
 		Output[] out = new Output[1];
 		int version;
 		int lockTime;
-		byte[] script = new byte[1+Constant.Address.BYTE_PUBLIC_KEY];
+		byte[] script = new byte[1 + Constant.Address.BYTE_PUBLIC_KEY];
 		script[0] = OPCode.PUSH512;
-		System.arraycopy(Setting.getBytePublicKey(), 0, script, 1, Constant.Address.BYTE_PUBLIC_KEY);
+		System.arraycopy(Setting.getPublicKey(), 0, script, 1, Constant.Address.BYTE_PUBLIC_KEY);
 		in[0] = new Input(new byte[] { 0x01, 0x02, 0x03 }, 1, 1, new Answer(script));
 		out[0] = new Output(1, 9, new Question(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 5, 6, 7, 8, 9, 10, 11, 12, 13,
 				14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 }));
 		version = 0xffff;
 		lockTime = 100;
-		return new Transaction(in, out, version, lockTime, keyPair);
+		try {
+			return new Transaction(in, out, version, lockTime, keyPair);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new TofuError.FatalError("cannot create transaction");
+		}
 	}
 }

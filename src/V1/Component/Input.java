@@ -11,6 +11,7 @@ import V1.Library.Constant;
 import V1.Library.Constant.Transaction;
 
 public class Input implements Externalizable {
+	private static final long serialVersionUID = 199603312040000L;
 	private byte[] outTxHash;
 	private int outIndex;
 	private int answerSize;

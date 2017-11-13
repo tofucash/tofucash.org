@@ -12,6 +12,7 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.IO;
@@ -42,13 +43,13 @@ public class Transaction implements Externalizable {
 		this.lockTime = lockTime;
 		this.signature = signature;
 	}
-	public Transaction(Input[] in, Output[] out, int version, int lockTime, KeyPair keyPair) {
+	public Transaction(Input[] in, Output[] out, int version, int lockTime, KeyPair keyPair) throws Exception {
 		this.in = in;
 		this.out = out;
 		this.version = version;
 		this.lockTime = lockTime;
 		this.signature = keyPair.getPublic().getEncoded();
-		this.signature = Crypto.sign(keyPair.getPrivate(), keyPair.getPublic(), IO.getByteObject(this));
+		this.signature = Crypto.sign(keyPair.getPrivate(), keyPair.getPublic(), ByteUtil.getByteObject(this));
 	}
 
 	public void removeNull() {
@@ -119,21 +120,6 @@ public class Transaction implements Externalizable {
 		oo.writeInt(out.length);
 		oo.writeObject(out);
 	}
-
-//	public static Object convertByteToObject(byte[] objByte, int cnt) {
-//		Object obj = null;
-//		try {
-//			ByteArrayInputStream byteis = new ByteArrayInputStream(objByte);
-//			ObjectInputStream objis = new ObjectInputStream(byteis);
-//			obj = objis.readObject();
-//			byteis.close();
-//			objis.close();
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//		;
-//		return obj;
-//	}
 
 	public String toString() {
 		return "[version: " + version + ", lockTime: " + lockTime + ", signature: "+DatatypeConverter.printHexBinary(signature)+", Input[]: " + Arrays.asList(in) + ", Output[]: "

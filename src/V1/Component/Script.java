@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.IO;
@@ -19,7 +20,6 @@ import V1.Library.Constant.Script.State;
 import V1.Library.TofuException.StackException;
 
 public class Script {
-	// https://en.bitcoin.it/wiki/Script
 	public Result resolve(final Question q, final Answer a, final Transaction tx, int index) {
 		Stack stack;
 
@@ -45,7 +45,7 @@ public class Script {
 
 	}
 
-	private void runQuestion(Stack stack, Question q, Transaction tx, int index) throws AssertionError, StackException {
+	private void runQuestion(Stack stack, Question q, Transaction tx, int index) throws AssertionError, StackException, Exception {
 		int i;
 		int pushByte = 0;
 		int popByte = 0;
@@ -89,7 +89,7 @@ public class Script {
 				} else if(questionScript[i] == Constant.Script.OPCode.CHECK_SIG) {
 					buf = stack.pop();
 					Transaction signData = new Transaction(tx.getIn(), tx.getOut(), tx.getVersion(), tx.getLockTime(), buf);
-					boolean result = Crypto.verify(buf, IO.getByteObject(signData), tx.getSignature());
+					boolean result = Crypto.verify(buf, ByteUtil.getByteObject(signData), tx.getSignature());
 					Log.log("result: "+result, Constant.Log.TEMPORARY);
 					if(result) {
 						stack.push(new byte[] {Constant.Script.OPCode.TRUE});

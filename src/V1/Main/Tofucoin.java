@@ -2,6 +2,7 @@ package V1.Main;
 
 
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import javax.xml.bind.DatatypeConverter;
@@ -9,6 +10,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import V1.Library.Constant;
 import V1.Library.Log;
+import V1.Library.TofuError;
 
 public class Tofucoin {
 	public static void main(String[] args) {
@@ -44,12 +46,7 @@ public class Tofucoin {
 		server = new Server();
 		server.start();
 
-		Log.log("Access...", Constant.Log.TEMPORARY);
-		try {
-			Thread.sleep(3000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		Log.log("Server is running.");
 	}
 	
 	private static void testInit() {
@@ -59,6 +56,12 @@ public class Tofucoin {
 		Log.init();
 		Setting.init();
 		Blockchain.init();
+		try {
+			Server.init();
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new TofuError.SettingError("Blockchain init failed.");
+		}
 
 		Log.loghr("Tofucoin init completed.");
 	}

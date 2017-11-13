@@ -1,5 +1,7 @@
 package V1.Main;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,81 +14,111 @@ import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.Block;
 import V1.Component.Input;
+import V1.Component.NetworkObject;
+import V1.Component.Node;
 import V1.Component.Output;
 import V1.Component.Question;
 import V1.Component.Script;
 import V1.Component.Transaction;
 import V1.Library.Base58;
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Constant.Script.OPCode;
 import V1.Library.Constant.Script.Result;
+import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
 import V1.Library.TofuError;
 import V1.Library.TofuException;
 import V1.Library.TofuException.AddressFormatException;
+import net.arnx.jsonic.JSON;
 
 public class Blockchain {
 
-	private final static int FORKABLE_BLOCK_HEIGHT = 3;
-
 	private static Block block;
-	static int blockHeight;
-	private static List<byte[]> prevBlockHashList;
-	private static Map<ByteBuffer, Map<Integer, Output>> utxoTable;
+	private static int blockHeight;
+
+	private static byte[] difficulty;
+	private static int currentTxFee;
+
+	private static Map<Integer, List<byte[]>> prevBlockHashTable;
+	private static Map<byte[], Map<Integer, Output>> utxoTable;	
 
 	static void init() {
 		block = new Block();
 		blockHeight = 1;
-		prevBlockHashList = new ArrayList<byte[]>();
-		utxoTable = new HashMap<ByteBuffer, Map<Integer, Output>>();
+
+		difficulty = new byte[Constant.Blockchain.BYTE_BLOCK_HASH];
+		currentTxFee = 0;
+
+		prevBlockHashTable = new HashMap<Integer, List<byte[]>>();
+		utxoTable = new HashMap<byte[], Map<Integer, Output>>();
+		
 		Log.log("Blockchain init done.");
 	}
 
-	static int getForkableBlockHeight() {
-		return blockHeight - FORKABLE_BLOCK_HEIGHT;
-	}
-
-	static boolean addTransaction(Transaction tx) {
+	static boolean addTransaction(NetworkObject no) {
+		// TODO currently invalid tx should be removed?
+		//      should be put into tx pool?
+		
+		Transaction tx = no.getTx();
 		// check transaction input is built based on utxo
-		int availableSum = 0;
+		int availableInputSum = 0, outputSum = 0;
 		int i = 0, tmp = 0;
 		List<byte[]> unavailableOutputList = new ArrayList<byte[]>();
-		List<Input> txList = new ArrayList<Input>(Arrays.asList(tx.getIn()));
-		for (Iterator<Input> it = txList.iterator(); it.hasNext(); i++) {
-			if ((tmp = checkTx(it, tx, i, unavailableOutputList)) == 0) {
+		List<Input> txInputList = new ArrayList<Input>(Arrays.asList(tx.getIn()));
+		List<Output> txOutputList = new ArrayList<Output>(Arrays.asList(tx.getOut()));
+		for (Iterator<Input> it = txInputList.iterator(); it.hasNext(); i++) {
+			if ((tmp = checkTxInput(it, tx, i, unavailableOutputList)) == 0) {
 				it.remove();
 				break;
 			}
-			availableSum += tmp;
+			availableInputSum += tmp;
+		}
+		for (Iterator<Output> it = txOutputList.iterator(); it.hasNext(); i++) {
+			Output out = it.next();
+			if (out == null) {
+				break;
+			}
+			outputSum += out.getAmount();
 		}
 		// message
 		// unavailable outputlist size() > 0
-		Log.log("[addTransaction()] availableSum: " + availableSum, Constant.Log.TEMPORARY);
+		Log.log("[addTransaction()] availableSum: " + availableInputSum, Constant.Log.TEMPORARY);
 
-		tx.updateIn(txList.toArray(new Input[txList.size()]));
+		if (availableInputSum < outputSum - Constant.Blockchain.TX_FEE) {
+			return false;
+		}
+
+		tx.updateIn(txInputList.toArray(new Input[txInputList.size()]));
 		Log.log("block: " + block, Constant.Log.TEMPORARY);
-		return block.addTransaction(tx);
+
+		if(!block.addTransaction(tx)) {
+			return false;
+		}
+		if(no.getType() == Constant.Blockchain.TX) {
+			Log.log("Broadcast tx: " + tx, Constant.Log.TEMPORARY);
+			Server.shareBackend(no);
+		}
+		
+		Mining.updateMining(block);
+		
+		return true;
 	}
 
-	static void newBlock() {
-		block = new Block();
-		blockHeight++;
-	}
-
-	static boolean addBlock(Block newBlock) {
-		// check block height (fork)
-		// add to latest block pool
-		// testBlockchain.add(newBlock);
-
-		// check txList
+	static boolean addBlock(NetworkObject no) {
+		// TODO check fork (utxo)
+		// TODO check markle tree
+		
+		Block newBlock = no.getBlock();
 		int i;
-		Iterator<Input> it;
+		Iterator<Input> inputIt;
+		Iterator<Output> outputIt;
 		List<byte[]> unavailableOutputList = new ArrayList<byte[]>();
 		for (Transaction tx : newBlock.getTxList()) {
 			i = 0;
-			for (it = Arrays.asList(tx.getIn()).iterator(); it.hasNext();) {
-				if (checkTx(it, tx, i, unavailableOutputList) == 0) {
+			for (inputIt = Arrays.asList(tx.getIn()).iterator(); inputIt.hasNext();) {
+				if (checkTxInput(inputIt, tx, i, unavailableOutputList) == 0) {
 					Log.log("Recept data rejected.", Constant.Log.INVALID);
 					return false;
 				}
@@ -95,15 +127,70 @@ public class Blockchain {
 		if (unavailableOutputList.size() != 0) {
 			return false;
 		}
+		try {
+			IO.fileWrite(Setting.BLOCKCHAIN_BIN_DIR + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
+					+ Constant.Environment.SEPARATOR + blockHeight, ByteUtil.getByteObject(newBlock));
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("invalid block data", Constant.Log.EXCEPTION);
+			return false;
+		}
+
+		block = new Block();
+		blockHeight++;
+
+		// TODO: manage orphan block...
+		// TODO: manage utxoTable Version...
+		int newBlockHeight = newBlock.getBlockHeight();
 		byte[] prevBlockHash = newBlock.getPrevBlockHash();
-		if (!prevBlockHashList.contains(prevBlockHash)) {
-			prevBlockHashList.add(prevBlockHash);
+		if (!prevBlockHashTable.containsKey(newBlockHeight)) {
+			List<byte[]> tmp = new ArrayList<byte[]>();
+			tmp.add(prevBlockHash);
+			prevBlockHashTable.put(newBlockHeight, tmp);
+		} else {
+			List<byte[]> tmp = prevBlockHashTable.get(newBlockHeight);
+			tmp.add(prevBlockHash);
 		}
-		if (prevBlockHashList.size() >= Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST) {
-			prevBlockHashList.remove(0);
+		if (prevBlockHashTable.size() >= Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST) {
+			prevBlockHashTable.remove(blockHeight - Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST);
 		}
-		IO.fileWrite(Setting.blockchainBinDir + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
-				+ Constant.Environment.SEPARATOR + blockHeight, IO.getByteObject(newBlock));
+
+		try {
+			for (Transaction tx : newBlock.getTxList()) {
+				for (outputIt = Arrays.asList(tx.getOut()).iterator(); outputIt.hasNext();) {
+					Output out = outputIt.next();
+					byte[] outputHash = Crypto.hashTwice(ByteUtil.getByteObject(out));
+					if (!utxoTable.containsKey(outputHash)) {
+						Map<Integer, Output> tmp = new HashMap<Integer, Output>();
+						tmp.put(blockHeight, out);
+						utxoTable.put(outputHash, tmp);
+					} else {
+						Map<Integer, Output> tmp = utxoTable.get(outputHash);
+						tmp.put(blockHeight, out);
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("invalid block data", Constant.Log.EXCEPTION);
+			return false;
+		}
+		if(no.getType() == Constant.Blockchain.BLOCK) {
+			Server.shareBackend(no);
+		}
+
+		return true;
+	}
+
+	static boolean addNode(NetworkObject no) {
+		Node node = no.getNode();
+		if (!node.checkSig()) {
+			Log.log("Access denied invalid node", Constant.Log.INVALID);
+			return false;
+		}
+		if(no.getType() == Constant.Blockchain.NODE) {
+			Server.shareBackend(no);
+		}
 		return true;
 	}
 
@@ -116,7 +203,7 @@ public class Blockchain {
 		return tx;
 	}
 
-	static int checkTx(Iterator<Input> it, Transaction tx, int index, List<byte[]> unavailableOutputList) {
+	static int checkTxInput(Iterator<Input> it, Transaction tx, int index, List<byte[]> unavailableOutputList) {
 		Input in = it.next();
 		if (in == null) {
 			return 0;
@@ -135,7 +222,7 @@ public class Blockchain {
 		// このstateをどうするか ethereumを参考に
 
 		Log.log("checkTx() script.resolve() result: " + result, Constant.Log.TEMPORARY);
-		
+
 		if (result == Constant.Script.Result.SOLVED) {
 			return out.getAmount();
 		} else if (result == Constant.Script.Result.FAILED) {
@@ -149,15 +236,16 @@ public class Blockchain {
 	}
 
 	static void setTestData() {
-		Log.log(
-				"new byte[] {0x01, 0x02, 0x03}: " + DatatypeConverter.printHexBinary(new byte[] { 0x01, 0x02, 0x03 }), Constant.Log.TEMPORARY);
+		Log.log("new byte[] {0x01, 0x02, 0x03}: " + DatatypeConverter.printHexBinary(new byte[] { 0x01, 0x02, 0x03 }),
+				Constant.Log.TEMPORARY);
 		Map<Integer, Output> tmp = new HashMap<Integer, Output>();
-		byte[] script = new byte[5+Constant.Address.BYTE_ADDRESS];
+		byte[] script = new byte[5 + Constant.Address.BYTE_ADDRESS];
 		script[0] = OPCode.PUBK_DUP;
 		script[1] = OPCode.HASH_TWICE;
 		script[2] = OPCode.PUSH256;
 		try {
-			System.arraycopy(Base58.decode("Be4qVLKM2PtucWukmUUc6s2CrcbQNH7PRnMbcssMwG6S"), 0, script, 3, Constant.Address.BYTE_ADDRESS);
+			System.arraycopy(Base58.decode("Be4qVLKM2PtucWukmUUc6s2CrcbQNH7PRnMbcssMwG6S"), 0, script, 3,
+					Constant.Address.BYTE_ADDRESS);
 		} catch (AddressFormatException e) {
 			e.printStackTrace();
 			throw new TofuError.SettingError("Addreess is wrong.");
@@ -165,9 +253,10 @@ public class Blockchain {
 		script[35] = OPCode.EQUAL_VERIFY;
 		script[36] = OPCode.CHECK_SIG;
 		tmp.put(1, new Output(1, 1, new Question(script)));
-		utxoTable.put(ByteBuffer.wrap(new byte[] { 0x01, 0x02, 0x03 }), tmp);
-//		tmp.put(1, new Output(1, 1, new Question(new byte[] { Constant.Script.OPCode.POP32_0, Constant.Script.OPCode.TRUE })));
-//		utxoTable.put(ByteBuffer.wrap(new byte[] { 0x01, 0x02, 0x03 }), tmp);
+		utxoTable.put(ByteBuffer.wrap(new byte[] { 0x01, 0x02, 0x03 }).array(), tmp);
+		// tmp.put(1, new Output(1, 1, new Question(new byte[] {
+		// Constant.Script.OPCode.POP32_0, Constant.Script.OPCode.TRUE })));
+		// utxoTable.put(ByteBuffer.wrap(new byte[] { 0x01, 0x02, 0x03 }), tmp);
 		Log.log("utxoList: " + utxoTable, Constant.Log.TEMPORARY);
 	}
 

@@ -12,7 +12,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
+import V1.Library.Crypto;
+import V1.Library.IO;
 import V1.Library.Log;
 import V1.TestClient.Setting;
 import net.arnx.jsonic.JSON;
@@ -23,29 +26,45 @@ public class Block implements Externalizable {
 	private final static int WALLET_LENGTH = 512;
 
 	private BlockHeader header;
-	private int txCnt;
 	private Transaction[] txList;
+	
+	private List<byte[]> markleTree;
 
 	static void init() {
 		Log.log("Block init done.");
 	}
 
 	public Block() {
-		byte[] timestamp = new byte[Constant.BYTE_TIMESTAMP];
-		header = new BlockHeader(Constant.BlockHeader.VERSION, new byte[Constant.Block.BYTE_BLOCK_HASH], timestamp,
-				new byte[Constant.Block.BYTE_NONCE], new byte[Constant.Address.BYTE_ADDRESS]);
-		txCnt = 0;
+		header = new BlockHeader(Constant.BlockHeader.VERSION, -1, new byte[Constant.Block.BYTE_BLOCK_HASH],
+				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS]);
 		txList = new Transaction[Constant.Block.MAX_TX];
+		markleTree = new ArrayList<byte[]>();
 	}
 
 	public synchronized boolean addTransaction(Transaction tx) {
-		txList[txCnt] = tx;
-		txCnt++;
+		//TODO update MarkleTree and root
+		try {
+			markleTree.add(Crypto.hash256(ByteUtil.getByteObject(tx)));
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("invalid data", Constant.Log.EXCEPTION);
+			return false;
+		}
+		header.updateMarkleRoot(markleTree.get(0));
+		txList[header.getBlockCnt()] = tx;
+		header.incrementBlock();
 		return true;
 	}
 
+	public BlockHeader getBlockHeader() {
+		return header;
+	}
 	public byte[] getPrevBlockHash() {
 		return header.getPrevBlockHash();
+	}
+
+	public int getBlockHeight() {
+		return header.getBlockHeight();
 	}
 
 	public Transaction[] getTxList() {
@@ -61,29 +80,25 @@ public class Block implements Externalizable {
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		header = (BlockHeader) oi.readObject();
-		txCnt = oi.readInt();
-		Log.log("txCnt: " + txCnt, Constant.Log.TEMPORARY);
-		txList = new Transaction[txCnt];
+		txList = new Transaction[header.getBlockCnt()];
 		txList = (Transaction[]) oi.readObject();
-//		for(int i = 0; i < txCnt; i++) {
-//			byte[] data = new byte[oi.readInt()];
-//			oi.read(data, 0, data.length);
-//			txList[i] = (Transaction)convertByteToTx(data);
-//			System.out.println(txList[i]);
-//		}
+		// for(int i = 0; i < txCnt; i++) {
+		// byte[] data = new byte[oi.readInt()];
+		// oi.read(data, 0, data.length);
+		// txList[i] = (Transaction)convertByteToTx(data);
+		// System.out.println(txList[i]);
+		// }
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeObject(header);
-		oo.writeInt(txCnt);
-		Log.log("txCnt: " + txCnt, Constant.Log.TEMPORARY);
-//		for (int i = 0; i < txList.length; i++) {
-//			byte[] data = Library.getByteObject(txList[i]);
-//			oo.writeInt(data.length);
-//			oo.write(data);
-//		}
-		 oo.writeObject(txList);
+		// for (int i = 0; i < txList.length; i++) {
+		// byte[] data = Library.getByteObject(txList[i]);
+		// oo.writeInt(data.length);
+		// oo.write(data);
+		// }
+		oo.writeObject(txList);
 	}
 
 	Transaction convertByteToTx(byte[] data) {

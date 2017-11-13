@@ -17,4 +17,11 @@ public class TofuError {
 			Log.log(content, Constant.Log.EXCEPTION);			
 		}
 	}
+	public static class FatalError extends Error {
+		private static final long serialVersionUID = 19960331080400L;
+		public FatalError(String content) {
+			super(content);
+			Log.log(content, Constant.Log.IMPORTANT);			
+		}		
+	}
 }

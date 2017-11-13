@@ -1,5 +1,7 @@
 package V1.Library;
 
+import java.nio.ByteBuffer;
+
 public class Constant {
 	// 他のクラスから参照する定数はConstantへ、それ以外はそれぞれのクラスにprivateとして設定したほうがよいか
 	// それだと、どこにどんな定数があったかが分かりづらくなる
@@ -12,8 +14,6 @@ public class Constant {
 	public static final int TEST_NETWORK = 1;
 	public static final int PRODUCT_NETWORK = 2;
 
-	public static final int BYTE_TIMESTAMP = 4;
-
 	public static class Address {
 		private Address() {
 		}
@@ -25,21 +25,7 @@ public class Constant {
 		public static final int BYTE_PUBLIC_KEY_PREFIX = 24;
 		public static final String PRIVATE_KEY_PREFIX = "303E020100301006072A8648CE3D020106052B8104000A042730250201010420";
 		public static final String PUBLIC_KEY_PREFIX = "3056301006072A8648CE3D020106052B8104000A03420004";
-	}
-
-	public static class Blockchain {
-		private Blockchain() {
-		}
-		
-		public static final int SAVE_FILE_PER_DIR = 1000;
-		public static final int MAX_PREV_BLOCK_HASH_LIST = 6;
-	}
-
-	public static class BlockHeader {
-		private BlockHeader() {
-		}
-
-		public static final int VERSION = 1;
+		public static final int BYTE_MAX_SIGNATURE = 72;
 	}
 
 	public static class Block {
@@ -51,18 +37,65 @@ public class Constant {
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
 	}
+	public static class Blockchain {
+		private Blockchain() {
+		}
+		
+		public static final int SAVE_FILE_PER_DIR = 1000;
+		public static final int MAX_PREV_BLOCK_HASH_LIST = 6;
+		public static final int BYTE_BLOCK_HASH = Block.BYTE_BLOCK_HASH;
+		public static final int TX_FEE = 1;
+
+		public static final int BLOCK = NetworkObject.BLOCK;
+		public static final int TX = NetworkObject.TX;
+		public static final int NODE = NetworkObject.NODE;
+
+	}
+
+	public static class BlockHeader {
+		private BlockHeader() {
+		}
+
+		public static final int VERSION = 1;
+	}
+
+
 	public static class Crypto {
 		private Crypto() {
 		}
 		public static final String SIGN_ALGO = "SHA256withECDSA";
+	}
+	public static class IO {
+		private IO() {
+		}
+		public static final int BYTE_BUF = 1024;
 	}
 
 	public static class NetworkObject {
 		private NetworkObject() {
 		}
 
-		public static final int BLOCK = 1;
-		public static final int TX = 2;
+		public static final int BLOCK = 100;
+		public static final int TX = 200;
+		public static final int NODE = 300;
+
+		public static final int HASH = 600;
+
+		public static final int BLOCK_BROADCAST = 110;
+		public static final int TX_BROADCAST = 210;
+		public static final int NODE_BROADCAST = 310;
+		
+		public static final int BYTE_MAX_HASH = 512;
+		
+	}
+	public static class Node {
+		private Node() {
+		}
+		public static final int DEFAULT_PORT = Server.SERVER_PORT;
+		public static final int BYTE_ADDRESS = Address.BYTE_ADDRESS;
+		public static final int BYTE_PUBLIC_KEY = Address.BYTE_PUBLIC_KEY;
+		public static final int BYTE_MAX_SIGNATURE = Address.BYTE_MAX_SIGNATURE;
+		public static final int BYTE_PUBLIC_KEY_PREFIX = 24;
 	}
 
 	public static class Transaction {
@@ -87,6 +120,7 @@ public class Constant {
 		public static final int SERVER_READ_SLEEP = 1000;
 		public static final int SERVER_PORT = 8081;
 		public static final int SERVER_BUF = 1024 * 1024; // 1MB
+		public static final int MAX_RECEPT_DATA_HASH_LIST = 1000;
 	}
 	public static class Stack {
 		private Stack() {}
@@ -94,6 +128,10 @@ public class Constant {
 		public static final int LENGTH_MAX_STACK = 100;
 		
 		public static final int NOTHING_IN_STACK = Script.OPCode.FALSE;
+	}
+	public static class Time {
+		private Time() {}
+		public static final int BYTE_TIMESTAMP = 5;
 	}
 
 	public static class Log {

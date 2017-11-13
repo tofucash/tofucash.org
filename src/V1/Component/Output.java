@@ -6,6 +6,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class Output implements Externalizable {
+	private static final long serialVersionUID = 199603312010000L;
 	private int amount;
 	private int questionSize;
 	private Question question;

@@ -51,7 +51,7 @@ public class Crypto {
 	// }
 	// return hash;
 	// }
-	public static byte[] hash(byte[] data, String algo) {
+	private static byte[] hash(byte[] data, String algo) {
 		MessageDigest md = null;
 		// StringBuilder sb = null;
 		byte[] hash = new byte[512];
@@ -73,6 +73,10 @@ public class Crypto {
 
 	public static byte[] hash256(byte[] data) {
 		return hash(data, "SHA-256");
+	}
+
+	public static byte[] hash512(byte[] data) {
+		return hash(data, "SHA-512");
 	}
 
 	// public static byte[] hash160(byte[] data) {

@@ -33,9 +33,11 @@ public class Constant {
 		}
 
 		public static final int VERSION = 1;
-		public static final int MAX_TX = 100;
+		public static final int MAX_TX_POWER = 8;
+		public static final int MAX_TX = (int) Math.pow(2, MAX_TX_POWER);
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
+		public static final int BYTE_TX_HASH = Transaction.BYTE_TX_HASH;
 	}
 	public static class Blockchain {
 		private Blockchain() {
@@ -49,6 +51,7 @@ public class Constant {
 		public static final int BLOCK = NetworkObject.BLOCK;
 		public static final int TX = NetworkObject.TX;
 		public static final int NODE = NetworkObject.NODE;
+
 
 	}
 

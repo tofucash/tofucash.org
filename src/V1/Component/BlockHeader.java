@@ -16,7 +16,7 @@ public class BlockHeader implements Externalizable {
 	private byte[] timestamp;
 	private byte[] miner;
 	private byte[] nonce;
-	private byte[] markleRoot;
+	private byte[] MerkleRoot;
 
 	public BlockHeader() {
 		version = -1;
@@ -26,7 +26,7 @@ public class BlockHeader implements Externalizable {
 		timestamp = null;
 		miner = null;
 		nonce = null;
-		markleRoot = null;
+		MerkleRoot = null;
 	}
 
 	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, byte[] timestamp, byte[] miner) {
@@ -37,7 +37,7 @@ public class BlockHeader implements Externalizable {
 		this.timestamp = timestamp;
 		this.miner = miner;
 		this.nonce = null;
-		this.markleRoot = null;
+		this.MerkleRoot = null;
 	}
 
 	byte[] getPrevBlockHash() {
@@ -55,8 +55,8 @@ public class BlockHeader implements Externalizable {
 	void incrementBlock() {
 		blockCnt++;
 	}
-	void updateMarkleRoot(byte[] markleRoot) {
-		this.markleRoot = markleRoot;
+	void updateMerkleRoot(byte[] MerkleRoot) {
+		this.MerkleRoot = MerkleRoot;
 	}
 
 	@Override
@@ -68,7 +68,7 @@ public class BlockHeader implements Externalizable {
 		oi.read(timestamp);
 		oi.read(miner);
 		oi.read(nonce);
-		oi.read(markleRoot);
+		oi.read(MerkleRoot);
 	}
 
 	@Override
@@ -80,14 +80,14 @@ public class BlockHeader implements Externalizable {
 		oo.write(timestamp);
 		oo.write(miner);
 		oo.write(nonce);
-		oo.write(markleRoot);
+		oo.write(MerkleRoot);
 	}
 
 	public String toString() {
 		return "[version: " + version + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
 				+ ", timestamp: " + DatatypeConverter.printHexBinary(timestamp) + ", miner: "
 				+ DatatypeConverter.printHexBinary(miner) + ", nonce: " + DatatypeConverter.printHexBinary(nonce)
-				+ ", markleTree: " + DatatypeConverter.printHexBinary(markleRoot) + "]";
+				+ ", MerkleTree: " + DatatypeConverter.printHexBinary(MerkleRoot) + "]";
 	}
 
 }

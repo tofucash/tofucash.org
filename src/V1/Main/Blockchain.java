@@ -108,7 +108,7 @@ public class Blockchain {
 
 	static boolean addBlock(NetworkObject no) {
 		// TODO check fork (utxo)
-		// TODO check markle tree
+		// TODO check Merkle tree
 		
 		Block newBlock = no.getBlock();
 		int i;
@@ -198,7 +198,7 @@ public class Blockchain {
 		Transaction tx = null;
 
 		// to do
-		// using markle tree
+		// using Merkle tree
 
 		return tx;
 	}

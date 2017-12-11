@@ -23,8 +23,6 @@ import net.arnx.jsonic.JSON;
 
 public class Block implements Externalizable {
 	private static final long serialVersionUID = 199603311050000L;
-	private final static int NONCE_LENGTH = 512;
-	private final static int WALLET_LENGTH = 512;
 
 	private BlockHeader header;
 	private Transaction[] txList;
@@ -37,8 +35,14 @@ public class Block implements Externalizable {
 	}
 
 	public Block() {
+		header = null;
+		txList = null;
+		merkleTree = null;
+		txHashList = null;
+	}
+	public Block(byte[] difficulty) {
 		header = new BlockHeader(Constant.BlockHeader.VERSION, -1, new byte[Constant.Block.BYTE_BLOCK_HASH],
-				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS]);
+				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS], difficulty);
 		txList = new Transaction[Constant.Block.MAX_TX];
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
@@ -57,8 +61,8 @@ public class Block implements Externalizable {
 			return false;
 		}
 		header.updateMerkleRoot(merkleTree.get(0));
-		txList[header.getBlockCnt()] = tx;
-		header.incrementBlock();
+		txList[header.getTxCnt()] = tx;
+		header.incrementTx();
 		return true;
 	}
 
@@ -78,6 +82,12 @@ public class Block implements Externalizable {
 	public Transaction[] getTxList() {
 		return txList;
 	}
+	public byte[] getDifficulty() {
+		return header.getDifficulty();
+	}
+	public void updateNonce(byte[] nonce) {
+		header.updateNonce(nonce);
+	}
 
 	public void removeNull() {
 		List<Transaction> txListAsList = new ArrayList<Transaction>(Arrays.asList(txList));
@@ -88,7 +98,7 @@ public class Block implements Externalizable {
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		header = (BlockHeader) oi.readObject();
-		txList = new Transaction[header.getBlockCnt()];
+		txList = new Transaction[header.getTxCnt()];
 		txList = (Transaction[]) oi.readObject();
 		// for(int i = 0; i < txCnt; i++) {
 		// byte[] data = new byte[oi.readInt()];

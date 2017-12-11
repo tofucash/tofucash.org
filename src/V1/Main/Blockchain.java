@@ -45,10 +45,10 @@ public class Blockchain {
 	private static Map<byte[], Map<Integer, Output>> utxoTable;	
 
 	static void init() {
-		block = new Block();
 		blockHeight = 1;
 
 		difficulty = new byte[Constant.Blockchain.BYTE_BLOCK_HASH];
+		block = new Block(difficulty);
 		currentTxFee = 0;
 
 		prevBlockHashTable = new HashMap<Integer, List<byte[]>>();
@@ -98,10 +98,10 @@ public class Blockchain {
 		}
 		if(no.getType() == Constant.Blockchain.TX) {
 			Log.log("Broadcast tx: " + tx, Constant.Log.TEMPORARY);
-			Server.shareBackend(no);
+			BackendServer.shareBackend(new NetworkObject(Constant.Blockchain.TX_BROADCAST, no.getTx()));
 		}
 		
-		Mining.updateMining(block);
+		MiningManager.updateMining(block);
 		
 		return true;
 	}
@@ -109,6 +109,7 @@ public class Blockchain {
 	static boolean addBlock(NetworkObject no) {
 		// TODO check fork (utxo)
 		// TODO check Merkle tree
+		// TODO update difficulty
 		
 		Block newBlock = no.getBlock();
 		int i;
@@ -126,33 +127,6 @@ public class Blockchain {
 		}
 		if (unavailableOutputList.size() != 0) {
 			return false;
-		}
-		try {
-			IO.fileWrite(Setting.BLOCKCHAIN_BIN_DIR + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
-					+ Constant.Environment.SEPARATOR + blockHeight, ByteUtil.getByteObject(newBlock));
-		} catch (Exception e) {
-			e.printStackTrace();
-			Log.log("invalid block data", Constant.Log.EXCEPTION);
-			return false;
-		}
-
-		block = new Block();
-		blockHeight++;
-
-		// TODO: manage orphan block...
-		// TODO: manage utxoTable Version...
-		int newBlockHeight = newBlock.getBlockHeight();
-		byte[] prevBlockHash = newBlock.getPrevBlockHash();
-		if (!prevBlockHashTable.containsKey(newBlockHeight)) {
-			List<byte[]> tmp = new ArrayList<byte[]>();
-			tmp.add(prevBlockHash);
-			prevBlockHashTable.put(newBlockHeight, tmp);
-		} else {
-			List<byte[]> tmp = prevBlockHashTable.get(newBlockHeight);
-			tmp.add(prevBlockHash);
-		}
-		if (prevBlockHashTable.size() >= Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST) {
-			prevBlockHashTable.remove(blockHeight - Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST);
 		}
 
 		try {
@@ -175,10 +149,47 @@ public class Blockchain {
 			Log.log("invalid block data", Constant.Log.EXCEPTION);
 			return false;
 		}
-		if(no.getType() == Constant.Blockchain.BLOCK) {
-			Server.shareBackend(no);
+		try {
+			IO.fileWrite(Setting.BLOCKCHAIN_BIN_DIR + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
+					+ File.separator + blockHeight, ByteUtil.getByteObject(newBlock));
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("invalid block data", Constant.Log.EXCEPTION);
+			return false;
+		}
+		// TODO: manage orphan block...
+		// TODO: manage utxoTable Version...
+		int newBlockHeight = newBlock.getBlockHeight();
+		byte[] prevBlockHash = newBlock.getPrevBlockHash();
+		if (!prevBlockHashTable.containsKey(newBlockHeight)) {
+			List<byte[]> tmp = new ArrayList<byte[]>();
+			tmp.add(prevBlockHash);
+			prevBlockHashTable.put(newBlockHeight, tmp);
+		} else {
+			List<byte[]> tmp = prevBlockHashTable.get(newBlockHeight);
+			tmp.add(prevBlockHash);
+		}
+		if (prevBlockHashTable.size() >= Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST) {
+			prevBlockHashTable.remove(blockHeight - Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST);
 		}
 
+		if(no.getType() == Constant.Blockchain.BLOCK) {
+			BackendServer.shareBackend(new NetworkObject(Constant.Blockchain.BLOCK_BROADCAST, no.getBlock()));
+		}
+
+		block = new Block(difficulty);
+		blockHeight++;
+
+		return true;
+	}
+	static boolean goToNextBlock(byte[] nonce) {
+		block.updateNonce(nonce);
+		NetworkObject no = new NetworkObject(Constant.Blockchain.BLOCK, block);
+		BackendServer.shareBackend(no);
+		
+		block = new Block(difficulty);
+		blockHeight++;
+		
 		return true;
 	}
 
@@ -189,7 +200,7 @@ public class Blockchain {
 			return false;
 		}
 		if(no.getType() == Constant.Blockchain.NODE) {
-			Server.shareBackend(no);
+			BackendServer.shareBackend(no);
 		}
 		return true;
 	}

@@ -1,4 +1,5 @@
 lib/*.jar
 src/Main/API.java
 src/Main/*.class
+data/*
 

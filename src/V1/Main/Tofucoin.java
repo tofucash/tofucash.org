@@ -28,7 +28,7 @@ public class Tofucoin {
 		Log.log("bytes: "+DatatypeConverter.printHexBinary(bytes), Constant.Log.TEMPORARY);
 		Log.log("bytes int: "+ByteBuffer.wrap(new byte[] {0x22, 0x21, 0x15, 0x64}).getInt(), Constant.Log.TEMPORARY);
 
-		Server server = null;
+		BackendServer server = null;
 
 		init();
 
@@ -43,7 +43,7 @@ public class Tofucoin {
 
 //		System.exit(0);
 		
-		server = new Server();
+		server = new BackendServer();
 		server.start();
 
 		Log.log("Server is running.");
@@ -56,11 +56,12 @@ public class Tofucoin {
 		Log.init();
 		Setting.init();
 		Blockchain.init();
+		MiningManager.init();
 		try {
-			Server.init();
+			BackendServer.init();
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new TofuError.SettingError("Blockchain init failed.");
+			throw new TofuError.SettingError("Server init failed.");
 		}
 
 		Log.loghr("Tofucoin init completed.");

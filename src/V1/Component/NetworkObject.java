@@ -13,34 +13,35 @@ import java.util.List;
 import javax.xml.bind.DatatypeConverter;
 
 import V1.Library.Constant;
+import V1.Library.Log;
 import V1.Library.TofuError;
 
 public class NetworkObject implements Externalizable {
 	private static final long serialVersionUID = 199603311030000L;
 	private int type;
-	private Transaction tx;
 	private Block block;
+	private Transaction tx;
 	private Node node;
-	private byte[] hash;
+	private Work work;
+	private Report report;
 
 	public NetworkObject() {
-		tx = null;
 		block = null;
+		tx = null;
 		node = null;
-		hash = null;
+		work = null;
+		report = null;
 	}
 
 	public NetworkObject(int type, Object data) {
 		this.type = type;
-		if (type == Constant.NetworkObject.TX) {
-			tx = (Transaction) data;
-			tx.removeNull();
-			block = null;
-			node = null;
-		} else if (type == Constant.NetworkObject.BLOCK) {
+		block = null;
+		tx = null;
+		node = null;
+		work = null;
+		report = null;
+		if (type - Constant.NetworkObject.BLOCK < 100) {
 			block = (Block) data;
-			tx = null;
-			node = null;
 			block.removeNull();
 			Iterator<Transaction> it;
 			int i;
@@ -48,15 +49,17 @@ public class NetworkObject implements Externalizable {
 			for (i = 0; i < txList.length; i++) {
 				txList[i].removeNull();
 			}
-		} else if (type == Constant.NetworkObject.NODE) {
+		} else if (type - Constant.NetworkObject.TX < 100) {
+			tx = (Transaction) data;
+			tx.removeNull();
+		} else if (type - Constant.NetworkObject.NODE < 100) {
 			node = (Node) data;
-			block = null;
-			tx = null;
-		} else if (type == Constant.NetworkObject.HASH) {
-			hash = (byte[]) data;
-			node = null;
-			block = null;
-			tx = null;
+		} else if (type - Constant.NetworkObject.WORK < 100) {
+			work = (Work) data;
+		} else if (type - Constant.NetworkObject.REPORT < 100) {
+			report = (Report) data;
+		} else {
+			throw new TofuError.UnimplementedError("Invalid NetworkObject Type");
 		}
 	}
 
@@ -74,19 +77,24 @@ public class NetworkObject implements Externalizable {
 	public Node getNode() {
 		return node;
 	}
-	public byte[] getHash() {
-		return hash;
+	public Work getWork() {
+		return work;
 	}
-
+	public Report getReport() {
+		return report;
+	}
+	
 	public String toString() {
-		if (type == Constant.NetworkObject.TX) {
-			return "[type: " + type + ", tx:" + tx.toString() + "]";
-		} else if (type == Constant.NetworkObject.BLOCK) {
+		if (type - Constant.NetworkObject.BLOCK < 100) {
 			return "[type: " + type + ", block: " + block.toString() + "]";
-		} else if (type == Constant.NetworkObject.NODE) {
+		} else if (type - Constant.NetworkObject.TX < 100) {
+			return "[type: " + type + ", tx:" + tx.toString() + "]";
+		} else if (type - Constant.NetworkObject.NODE < 100) {
 			return "[type: " + type + ", node: " + node.toString() + "]";
-		} else if (type == Constant.NetworkObject.HASH) {
-			return "[type: " + type + ", hash: " + DatatypeConverter.printHexBinary(hash) + "]";
+		} else if (type - Constant.NetworkObject.WORK < 100) {
+			return "[type: " + type + ", work: " + work + "]";
+		} else if (type - Constant.NetworkObject.REPORT < 100) {
+			return "[type: " + type + ", report: " + report + "]";
 		} else {
 			throw new TofuError.UnimplementedError("unknown type");
 		}
@@ -95,34 +103,32 @@ public class NetworkObject implements Externalizable {
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		type = (int) oi.readObject();
-		if (type == Constant.NetworkObject.TX) {
-			tx = (Transaction) oi.readObject();
-		} else if (type == Constant.NetworkObject.BLOCK) {
+		if (type - Constant.NetworkObject.BLOCK < 100) {
 			block = (Block) oi.readObject();
-		} else if (type == Constant.NetworkObject.NODE) {
+		} else if (type - Constant.NetworkObject.TX < 100) {
+			tx = (Transaction) oi.readObject();
+		} else if (type - Constant.NetworkObject.NODE < 100) {
 			node = (Node) oi.readObject();
-		} else if (type == Constant.NetworkObject.HASH) {
-			int byteHash = oi.readInt();
-			if(byteHash > Constant.NetworkObject.BYTE_MAX_HASH) {
-				return;
-			}
-			hash = new byte[byteHash];
-			oi.read(hash);
+		} else if (type - Constant.NetworkObject.WORK < 100) {
+			work = (Work) oi.readObject();
+		} else if (type - Constant.NetworkObject.REPORT < 100) {
+			report = (Report) oi.readObject();
 		}
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeObject(type);
-		if (type == Constant.NetworkObject.TX) {
-			oo.writeObject(tx);
-		} else if (type == Constant.NetworkObject.BLOCK) {
+		if (type - Constant.NetworkObject.BLOCK < 100) {
 			oo.writeObject(block);
-		} else if (type == Constant.NetworkObject.NODE) {
+		} else if (type - Constant.NetworkObject.TX < 100) {
+			oo.writeObject(tx);
+		} else if (type - Constant.NetworkObject.NODE < 100) {
 			oo.writeObject(node);
-		} else if (type == Constant.NetworkObject.HASH) {
-			oo.writeInt(hash.length);
-			oo.write(hash);
+		} else if (type - Constant.NetworkObject.WORK < 100) {
+			oo.writeObject(work);
+		} else if (type - Constant.NetworkObject.REPORT < 100) {
+			oo.writeObject(report);
 		}
 	}
 }

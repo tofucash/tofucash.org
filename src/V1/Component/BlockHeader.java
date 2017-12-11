@@ -11,33 +11,36 @@ public class BlockHeader implements Externalizable {
 	private static final long serialVersionUID = 199603312020000L;
 	private int version;
 	private int blockHeight;
-	private int blockCnt;
+	private int txCnt;
 	private byte[] prevBlockHash;
 	private byte[] timestamp;
 	private byte[] miner;
+	private byte[] difficulty;
 	private byte[] nonce;
-	private byte[] MerkleRoot;
+	private byte[] merkleRoot;
 
 	public BlockHeader() {
 		version = -1;
 		blockHeight = -1;
-		blockCnt = 0;
+		txCnt = 0;
 		prevBlockHash = null;
 		timestamp = null;
 		miner = null;
+		difficulty = null;
 		nonce = null;
-		MerkleRoot = null;
+		merkleRoot = null;
 	}
 
-	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, byte[] timestamp, byte[] miner) {
+	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, byte[] timestamp, byte[] miner, byte[] difficulty) {
 		this.version = version;
 		this.blockHeight = blockHeight;
-		this.blockCnt = 0;
+		this.txCnt = 0;
 		this.prevBlockHash = prevBlockHash;
 		this.timestamp = timestamp;
 		this.miner = miner;
+		this.difficulty = difficulty;
 		this.nonce = null;
-		this.MerkleRoot = null;
+		this.merkleRoot = null;
 	}
 
 	byte[] getPrevBlockHash() {
@@ -48,46 +51,55 @@ public class BlockHeader implements Externalizable {
 		return blockHeight;
 	}
 
-	int getBlockCnt() {
-		return blockCnt;
+	int getTxCnt() {
+		return txCnt;
 	}
 
-	void incrementBlock() {
-		blockCnt++;
+	void incrementTx() {
+		txCnt++;
 	}
 	void updateMerkleRoot(byte[] MerkleRoot) {
-		this.MerkleRoot = MerkleRoot;
+		this.merkleRoot = MerkleRoot;
+	}
+	
+	byte[] getDifficulty() {
+		return difficulty;
+	}
+	void updateNonce(byte[] nonce) {
+		this.nonce = nonce;
 	}
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		version = oi.readInt();
 		blockHeight = oi.readInt();
-		blockCnt = oi.readInt();
+		txCnt = oi.readInt();
 		oi.read(prevBlockHash);
 		oi.read(timestamp);
 		oi.read(miner);
+		oi.read(difficulty);
 		oi.read(nonce);
-		oi.read(MerkleRoot);
+		oi.read(merkleRoot);
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeInt(version);
 		oo.writeInt(blockHeight);
-		oo.writeInt(blockCnt);
+		oo.writeInt(txCnt);
 		oo.write(prevBlockHash);
 		oo.write(timestamp);
 		oo.write(miner);
+		oo.write(difficulty);
 		oo.write(nonce);
-		oo.write(MerkleRoot);
+		oo.write(merkleRoot);
 	}
 
 	public String toString() {
 		return "[version: " + version + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
 				+ ", timestamp: " + DatatypeConverter.printHexBinary(timestamp) + ", miner: "
 				+ DatatypeConverter.printHexBinary(miner) + ", nonce: " + DatatypeConverter.printHexBinary(nonce)
-				+ ", MerkleTree: " + DatatypeConverter.printHexBinary(MerkleRoot) + "]";
+				+ ", MerkleTree: " + DatatypeConverter.printHexBinary(merkleRoot) + "]";
 	}
 
 }

@@ -51,6 +51,10 @@ public class Constant {
 		public static final int BLOCK = NetworkObject.BLOCK;
 		public static final int TX = NetworkObject.TX;
 		public static final int NODE = NetworkObject.NODE;
+		public static final int BLOCK_BROADCAST = NetworkObject.BLOCK_BROADCAST;
+		public static final int TX_BROADCAST = NetworkObject.TX_BROADCAST;
+		public static final int NODE_BROADCAST = NetworkObject.NODE_BROADCAST;
+		
 
 
 	}
@@ -82,13 +86,19 @@ public class Constant {
 		public static final int TX = 200;
 		public static final int NODE = 300;
 
-		public static final int HASH = 600;
-
 		public static final int BLOCK_BROADCAST = 110;
 		public static final int TX_BROADCAST = 210;
 		public static final int NODE_BROADCAST = 310;
+
+		public static final int WORK = 600;
+		public static final int WORK_REQUEST = 610;
+		public static final int WORK_UNDERTAKE = 620;
+
+		public static final int REPORT = 700;
+		
 		
 		public static final int BYTE_MAX_HASH = 512;
+		public static final int BYTE_MAX_NONCE = 512;
 		
 	}
 	public static class Node {
@@ -100,7 +110,34 @@ public class Constant {
 		public static final int BYTE_MAX_SIGNATURE = Address.BYTE_MAX_SIGNATURE;
 		public static final int BYTE_PUBLIC_KEY_PREFIX = 24;
 	}
+	public static class Report {
+		private Report() {
+		}
+		public static final int BYTE_MAX_HASH = NetworkObject.BYTE_MAX_HASH;
+		public static final int BYTE_MAX_NONCE = NetworkObject.BYTE_MAX_NONCE;
+	}
 
+	public static class Server {
+		private Server() {
+		}
+
+		public static final int SERVER_READ_SLEEP = 1000;
+		public static final int SERVER_PORT = 45910;
+		public static final int HASH_SERVER_PORT = 50813;
+		public static final int SERVER_BUF = 1024 * 1024; // 1MB
+		public static final int MAX_RECEPT_DATA_HASH_LIST = 1000;
+		
+		public static final int MAX_ACCESS_PER_DAY = 10;
+		public static final int NONCE_CNT = 100;
+		public static final String HASH_ALGO = "sha512";
+	}
+	public static class Stack {
+		private Stack() {}
+		
+		public static final int LENGTH_MAX_STACK = 100;
+		
+		public static final int NOTHING_IN_STACK = Script.OPCode.FALSE;
+	}
 	public static class Transaction {
 		private Transaction() {
 		}
@@ -114,24 +151,6 @@ public class Constant {
 		
 		public static final int BYTE_MAX_SIGNATURE = 512;
 	}
-
-
-	public static class Server {
-		private Server() {
-		}
-
-		public static final int SERVER_READ_SLEEP = 1000;
-		public static final int SERVER_PORT = 8081;
-		public static final int SERVER_BUF = 1024 * 1024; // 1MB
-		public static final int MAX_RECEPT_DATA_HASH_LIST = 1000;
-	}
-	public static class Stack {
-		private Stack() {}
-		
-		public static final int LENGTH_MAX_STACK = 100;
-		
-		public static final int NOTHING_IN_STACK = Script.OPCode.FALSE;
-	}
 	public static class Time {
 		private Time() {}
 		public static final int BYTE_TIMESTAMP = 5;
@@ -141,19 +160,15 @@ public class Constant {
 		private Log() {
 		}
 
-		public static final String NORMAL = "\u001b[00;40m \u001b[00;30m";
+		public static final String NORMAL = "\u001b[00;44m \u001b[00;34m";
 		public static final String IMPORTANT = "\u001b[00;46m \u001b[00;36m";
-		public static final String TEMPORARY = "\u001b[00;47m ";
+		public static final String TEMPORARY = "\u001b[00;47m \u001b[00;33m";
 		public static final String EXCEPTION = "\u001b[00;41m \u001b[00;31m";
 		public static final String INVALID = "\u001b[00;45m \u001b[00;35m";
 	}
-
-	// class file does not exists
-	public static class Environment {
-		private Environment() {
-		}
-
-		public static final String SEPARATOR = System.getProperty("file.separator");
+	
+	public static class Work {
+		public static final int BYTE_MAX_HASH = NetworkObject.BYTE_MAX_HASH;
 	}
 
 	public static class Script {

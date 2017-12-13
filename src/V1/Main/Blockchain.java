@@ -110,7 +110,6 @@ public class Blockchain {
 		// TODO check fork (utxo)
 		// TODO check Merkle tree
 		// TODO update difficulty
-		
 		Block newBlock = no.getBlock();
 		int i;
 		Iterator<Input> inputIt;
@@ -149,6 +148,10 @@ public class Blockchain {
 			Log.log("invalid block data", Constant.Log.EXCEPTION);
 			return false;
 		}
+		
+		return goToNextBlock(newBlock, no.getType() == Constant.Blockchain.BLOCK);
+	}
+	static boolean goToNextBlock(Block newBlock, boolean broadcast) {
 		try {
 			IO.fileWrite(Setting.BLOCKCHAIN_BIN_DIR + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
 					+ File.separator + blockHeight, ByteUtil.getByteObject(newBlock));
@@ -173,24 +176,21 @@ public class Blockchain {
 			prevBlockHashTable.remove(blockHeight - Constant.Blockchain.MAX_PREV_BLOCK_HASH_LIST);
 		}
 
-		if(no.getType() == Constant.Blockchain.BLOCK) {
-			BackendServer.shareBackend(new NetworkObject(Constant.Blockchain.BLOCK_BROADCAST, no.getBlock()));
+		if(broadcast) {
+			BackendServer.shareBackend(new NetworkObject(Constant.Blockchain.BLOCK_BROADCAST, newBlock));
 		}
 
 		block = new Block(difficulty);
 		blockHeight++;
 
 		return true;
+
 	}
-	static boolean goToNextBlock(byte[] nonce) {
-		block.updateNonce(nonce);
+	static boolean nonceFound(byte[] nonce, byte[] miner) {
+		block.nonceFound(nonce, miner);
 		NetworkObject no = new NetworkObject(Constant.Blockchain.BLOCK, block);
-		BackendServer.shareBackend(no);
-		
-		block = new Block(difficulty);
-		blockHeight++;
-		
-		return true;
+				
+		return goToNextBlock(block, true);
 	}
 
 	static boolean addNode(NetworkObject no) {

@@ -1,4 +1,4 @@
-package V1.Main;
+package V1.Frontend;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -28,33 +28,39 @@ import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.NetworkObject;
 import V1.Component.Node;
+import V1.Component.Work;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
 
-public class Server extends Thread{
+public class FrontendServer extends Thread{
 	private static List<byte[]> receptDataHashList;
 	private static Map<String, Node> backendTable;
 	private static Map<String, Node> frontendTable;
+	private static List<String> blacklist;
 
 	static void init() throws Exception {
 		receptDataHashList = new ArrayList<byte[]>();
 
 		backendTable = new HashMap<String, Node>();
+		frontendTable = new HashMap<String, Node>();
+		blacklist = new ArrayList<String>();
 		Node tmp;
-		for (File file : new File(Setting.TRUSTED_SERVER_DIR).listFiles()) {
-			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_SERVER_DIR + file.getName()));
+		for (File file : new File(Setting.TRUSTED_FRONTEND_DIR).listFiles()) {
+			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_FRONTEND_DIR + file.getName()));
+			frontendTable.put(tmp.getIp(), tmp);
+		}
+		for (File file : new File(Setting.TRUSTED_BACKEND_DIR).listFiles()) {
+			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_BACKEND_DIR + file.getName()));
 			backendTable.put(tmp.getIp(), tmp);
 		}
-
-		frontendTable = new HashMap<String, Node>();
 		
 		Log.log("Server init done.");
 	}
 
-	public void start() {
+	public void run() {
 		try {
 			ServerSocket ss = new ServerSocket(Constant.Server.SERVER_PORT);
 			Log.log("Server ready.");
@@ -63,10 +69,16 @@ public class Server extends Thread{
 				try {
 					Socket soc = ss.accept();
 					String remoteIp = soc.getRemoteSocketAddress().toString().replaceAll("/(.*):.*", "$1");
-					if(backendTable.containsKey(remoteIp)) {
-						new Client(soc, remoteIp).start();		
+					if(!backendTable.containsKey(remoteIp)) {
+						Log.log("[Unknown node] access denied not trusted ip [" + remoteIp + "]");
+						soc.close();
+					} else if(blacklist.contains(remoteIp)) {
+						Log.log("[Blacklist node] access denied not trusted ip [" + remoteIp + "]");
+						soc.close();
+					} else if(HashServer.getAccesstable().containsKey(remoteIp)) {
+						new Client(soc, remoteIp).start();						
 					} else {
-						Log.log("access denied not trusted ip [" + remoteIp + "]");
+						new Client(soc, remoteIp).start();
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -104,7 +116,7 @@ public class Server extends Thread{
 						is = soc.getInputStream();
 						isr = new InputStreamReader(is);
 						baos = new ByteArrayOutputStream();
-						byte[] buffer = new byte[1024];
+						byte[] buffer = new byte[4098];
 						int readBytes = -1;
 						byte[] data;
 						int available = is.available();
@@ -113,8 +125,6 @@ public class Server extends Thread{
 							baos.write(buffer, 0, readBytes);
 							data = baos.toByteArray();
 							bbuf.put(data);
-							pw.println("Your data is accepted.");
-							pw.flush();
 						} else {
 							break;
 						}
@@ -134,7 +144,8 @@ public class Server extends Thread{
 						}
 
 					}
-				}
+				}				
+				receptNetworkObject(bbuf, remoteIp, pw);
 				br.close();
 				pw.close();
 				isr.close();
@@ -143,80 +154,86 @@ public class Server extends Thread{
 				e.printStackTrace();
 				Log.log("[Exception]: Server", Constant.Log.EXCEPTION);
 			}
-			try {
-				ByteArrayInputStream b = new ByteArrayInputStream(bbuf.array());
-				ObjectInputStream o = new ObjectInputStream(b);
-				no = (NetworkObject) o.readObject();
-				o.close();
-				b.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-
-			try {
-				byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
-				if (ByteUtil.contains(receptDataHashList, hash)) {
-					Log.log("already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
-					return;
-				} else {
-					receptDataHashList.add(hash);
-					if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
-						receptDataHashList.remove(0);
-					}
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				Log.log("invalid NetworkObject", Constant.Log.EXCEPTION);
-				return;
-			}
-
-			Log.log("[Client.run()] no: " + no, Constant.Log.TEMPORARY);
-
-			if (no.getType() == Constant.NetworkObject.TX || no.getType() == Constant.NetworkObject.TX_BROADCAST) {
-				Blockchain.addTransaction(no);
-				return;
-			} else if (no.getType() == Constant.NetworkObject.BLOCK
-					|| no.getType() == Constant.NetworkObject.BLOCK_BROADCAST) {
-				Blockchain.addBlock(no);
-				return;
-			} else if (no.getType() == Constant.NetworkObject.NODE
-					|| no.getType() == Constant.NetworkObject.NODE_BROADCAST) {
-				Blockchain.addNode(no);
-				if(remoteIp.equals(no.getNode().getIp())) {
-					backendTable.put(remoteIp, no.getNode());
-					Log.log(backendTable.toString());
-					return;
-				}
-			} else if (no.getType() == Constant.NetworkObject.HASH) {
-				Log.log("hash [" + DatatypeConverter.printHexBinary(no.getHash()) + "]");
-				return;
-			}
-			Log.log("Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
-			Log.log(no.toString(), Constant.Log.EXCEPTION);
+			Log.log("[Client.run()] end");
 		}
+	}
+	static void receptNetworkObject(ByteBuffer bbuf, String remoteIp, PrintWriter pw) {
+		NetworkObject no = null;
+		try {
+			ByteArrayInputStream b = new ByteArrayInputStream(bbuf.array());
+			ObjectInputStream o = new ObjectInputStream(b);
+			no = (NetworkObject) o.readObject();
+			o.close();
+			b.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
+
+		try {
+			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
+			if (ByteUtil.contains(receptDataHashList, hash)) {
+				Log.log("already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
+				return;
+			} else {
+				receptDataHashList.add(hash);
+				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
+					receptDataHashList.remove(0);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("invalid NetworkObject", Constant.Log.EXCEPTION);
+			return;
+		}
+
+		Log.log("[Client.run()] no: " + no, Constant.Log.TEMPORARY);
+
+		if (no.getType() == Constant.NetworkObject.TX || no.getType() == Constant.NetworkObject.TX_BROADCAST) {
+			return;
+		} else if (no.getType() == Constant.NetworkObject.BLOCK
+				|| no.getType() == Constant.NetworkObject.BLOCK_BROADCAST) {
+			return;
+		} else if (no.getType() == Constant.NetworkObject.NODE
+				|| no.getType() == Constant.NetworkObject.NODE_BROADCAST) {
+			if(remoteIp.equals(no.getNode().getIp())) {
+				backendTable.put(remoteIp, no.getNode());
+				Log.log(backendTable.toString());
+				return;
+			}
+		} else if (no.getType() == Constant.NetworkObject.WORK_REQUEST) {
+			MiningManager.receptWork(no, pw);
+			return;
+		}
+		Log.log("Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
+		Log.log(no.toString(), Constant.Log.EXCEPTION);
 	}
 
 	static void shareBackend(NetworkObject no) {
 		if (!Setting.BROADCAST_BACKEND) {
+			Log.log("BROADCAST_BACKEND false");
 			return;
 		}
 		broadcast(no, backendTable);
 	}
-	static void shareFrontend(byte[] hash) {
+	static void shareFrontend(Work work) {
+		// nonce range share?
 		if (!Setting.BROADCAST_FRONTEND) {
+			Log.log("BROADCAST_FRONTEND false");
 			return;
 		}
-		NetworkObject no = new NetworkObject(Constant.NetworkObject.HASH, hash);
-		broadcast(no, backendTable);
+		NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK, work);
+		broadcast(no, frontendTable);
 	}
-	static void broadcast(NetworkObject no, Map<String, Node> remote) {
+	private static void broadcast(NetworkObject no, Map<String, Node> remote) {
+		Log.log("broadcast no: " + no, Constant.Log.TEMPORARY);
 		for (Node node : remote.values()) {
 			Socket socket = new Socket();
+			Log.log("[FrontendServer.broadcast()] to: " + node.getIp());
 
 			try {
 				InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
 				socket.connect(socketAddress, 30000);
-				Log.log("buffersize: " + socket.getSendBufferSize(), Constant.Log.TEMPORARY);
 
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				ObjectOutputStream oos = null;

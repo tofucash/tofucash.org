@@ -85,8 +85,8 @@ public class Block implements Externalizable {
 	public byte[] getDifficulty() {
 		return header.getDifficulty();
 	}
-	public void updateNonce(byte[] nonce) {
-		header.updateNonce(nonce);
+	public void nonceFound(byte[] nonce, byte[] miner) {
+		header.nonceFound(nonce, miner);
 	}
 
 	public void removeNull() {

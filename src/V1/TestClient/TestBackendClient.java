@@ -23,6 +23,7 @@ import V1.Component.Node;
 import V1.Component.Output;
 import V1.Component.Question;
 import V1.Component.Transaction;
+import V1.Component.Work;
 import V1.Library.Address;
 import V1.Library.Base58;
 import V1.Library.ByteUtil;
@@ -33,26 +34,30 @@ import V1.Library.IO;
 import V1.Library.Log;
 import V1.Library.TofuError;
 
-public class TestClient {
+public class TestBackendClient {
 	static KeyPair keyPair = null;
 	static byte[] address = null;
 
 	public static void main(String[] args) {
 		init();
-		// test1();
-		 test2();
-		accessTest();
+		test1();
+//		makeTrustedServerFile();
+//		accessTest();
 	}
 
-	static void test2() {
+	static void makeTrustedServerFile() {
+		String fileName, ip, nodeName, dirName;
 		Node node;
-
-		node = new Node("192.168.56.1", Constant.Server.SERVER_PORT, "test node", Setting.getAddress(), Setting.getKeyPair());
+		dirName = "frontendServer";
+		ip = "0.0.0.0";
+		fileName = ip+".conf";
+		nodeName = "euro";
+		node = new Node(ip, Constant.Server.SERVER_PORT, nodeName, Setting.getAddress(), Setting.getKeyPair());
 
 		try {
-			IO.fileWrite(System.getProperty("user.dir") + "\\data\\trustedServer\\test1.conf", ByteUtil.getByteObject(node));
+			IO.fileWrite(System.getProperty("user.dir") + "\\data\\"+dirName+"\\"+fileName, ByteUtil.getByteObject(node));
 			Log.log(ByteUtil.convertByteToObject(
-					IO.readFileToByte(System.getProperty("user.dir") + "\\data\\trustedServer\\test1.conf")));
+					IO.readFileToByte(System.getProperty("user.dir") + "\\data\\"+dirName+"\\"+fileName)));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -117,7 +122,7 @@ public class TestClient {
 			node = new Node("192.168.56.1", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
 
 			tx = getTestTransaction();
-			block = new Block();
+			block = new Block(new byte[] {0x01, 0x4a, 0x02});
 			block.addTransaction(tx);
 
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.TX,
@@ -125,7 +130,7 @@ public class TestClient {
 			// NetworkObject no = new
 			// NetworkObject(Constant.NetworkObject.BLOCK, block);
 //			NetworkObject no = new NetworkObject(Constant.NetworkObject.NODE, node);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.HASH, new byte[] {0x01, 0x4a, 0x02});
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK, new Work(new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02}));
 			
 			Log.log("no: " + no, Constant.Log.TEMPORARY);
 			try {

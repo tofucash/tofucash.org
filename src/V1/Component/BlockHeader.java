@@ -65,8 +65,9 @@ public class BlockHeader implements Externalizable {
 	byte[] getDifficulty() {
 		return difficulty;
 	}
-	void updateNonce(byte[] nonce) {
+	void nonceFound(byte[] nonce, byte[] miner) {
 		this.nonce = nonce;
+		this.miner = miner;
 	}
 
 	@Override

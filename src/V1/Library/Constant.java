@@ -99,6 +99,7 @@ public class Constant {
 		
 		public static final int BYTE_MAX_HASH = 512;
 		public static final int BYTE_MAX_NONCE = 512;
+		public static final int BYTE_MAX_MINER = 512;
 		
 	}
 	public static class Node {
@@ -115,6 +116,7 @@ public class Constant {
 		}
 		public static final int BYTE_MAX_HASH = NetworkObject.BYTE_MAX_HASH;
 		public static final int BYTE_MAX_NONCE = NetworkObject.BYTE_MAX_NONCE;
+		public static final int BYTE_MAX_MINER = NetworkObject.BYTE_MAX_MINER;
 	}
 
 	public static class Server {

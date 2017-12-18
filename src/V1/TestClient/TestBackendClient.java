@@ -2,6 +2,7 @@ package V1.TestClient;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -41,8 +42,8 @@ public class TestBackendClient {
 	public static void main(String[] args) {
 		init();
 		test1();
-//		makeTrustedServerFile();
-//		accessTest();
+		// makeTrustedServerFile();
+		// accessTest();
 	}
 
 	static void makeTrustedServerFile() {
@@ -50,14 +51,15 @@ public class TestBackendClient {
 		Node node;
 		dirName = "frontendServer";
 		ip = "0.0.0.0";
-		fileName = ip+".conf";
+		fileName = ip + ".conf";
 		nodeName = "euro";
 		node = new Node(ip, Constant.Server.SERVER_PORT, nodeName, Setting.getAddress(), Setting.getKeyPair());
 
 		try {
-			IO.fileWrite(System.getProperty("user.dir") + "\\data\\"+dirName+"\\"+fileName, ByteUtil.getByteObject(node));
+			IO.fileWrite(System.getProperty("user.dir") + File.separator + "data" + File.separator + dirName
+					+ File.separator, fileName, ByteUtil.getByteObject(node));
 			Log.log(ByteUtil.convertByteToObject(
-					IO.readFileToByte(System.getProperty("user.dir") + "\\data\\"+dirName+"\\"+fileName)));
+					IO.readFileToByte(System.getProperty("user.dir") + "\\data\\" + dirName + "\\" + fileName)));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -122,16 +124,18 @@ public class TestBackendClient {
 			node = new Node("192.168.56.1", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
 
 			tx = getTestTransaction();
-			block = new Block(new byte[] {0x01, 0x4a, 0x02});
+			block = new Block(new byte[] { 0x01, 0x4a, 0x02 });
 			block.addTransaction(tx);
 
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.TX,
 			// tx);
 			// NetworkObject no = new
 			// NetworkObject(Constant.NetworkObject.BLOCK, block);
-//			NetworkObject no = new NetworkObject(Constant.NetworkObject.NODE, node);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK, new Work(new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02}));
-			
+			// NetworkObject no = new NetworkObject(Constant.NetworkObject.NODE,
+			// node);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK,
+					new Work(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 }));
+
 			Log.log("no: " + no, Constant.Log.TEMPORARY);
 			try {
 				oos = new ObjectOutputStream(baos);

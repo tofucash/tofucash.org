@@ -40,9 +40,9 @@ public class Block implements Externalizable {
 		merkleTree = null;
 		txHashList = null;
 	}
-	public Block(byte[] difficulty) {
+	public Block(byte[] target) {
 		header = new BlockHeader(Constant.BlockHeader.VERSION, -1, new byte[Constant.Block.BYTE_BLOCK_HASH],
-				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS], difficulty);
+				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS], target);
 		txList = new Transaction[Constant.Block.MAX_TX];
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
@@ -82,8 +82,8 @@ public class Block implements Externalizable {
 	public Transaction[] getTxList() {
 		return txList;
 	}
-	public byte[] getDifficulty() {
-		return header.getDifficulty();
+	public byte[] getTarget() {
+		return header.getTarget();
 	}
 	public void nonceFound(byte[] nonce, byte[] miner) {
 		header.nonceFound(nonce, miner);

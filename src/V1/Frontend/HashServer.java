@@ -28,6 +28,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.NetworkObject;
 import V1.Component.Node;
+import V1.Component.Report;
 import V1.Component.Work;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
@@ -101,7 +102,7 @@ public class HashServer extends Thread {
 			ByteArrayOutputStream baos = null;
 			ByteBuffer bbuf = ByteBuffer.allocate(Constant.Server.SERVER_BUF);
 			Work work = MiningManager.getWork();
-			String json = "{\"difficulty\": \"" + DatatypeConverter.printHexBinary(work.getDifficulty())
+			String json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget())
 					+ "\", \"hash\": \"" + DatatypeConverter.printHexBinary(work.getHash()) + "\", \"start\": \""
 					+ DatatypeConverter.printHexBinary(calcStart(work.getHash(), remoteIp)) + "\", \"cnt\": \""
 					+ Constant.Server.NONCE_CNT + "\", \"algo\": \"" + Constant.Server.HASH_ALGO + "\"}";
@@ -119,12 +120,10 @@ public class HashServer extends Thread {
 						byte[] buffer = new byte[4096];
 						byte[] data;
 						int available = is.available();
-						Log.log("[Client.run()] is.available(): " + available, Constant.Log.TEMPORARY);
 						if (available > 0 && (readBytes += is.read(buffer)) > 1) {
 							baos.write(buffer, 0, readBytes);
 							data = baos.toByteArray();
 							bbuf.put(data);
-							Log.log("data: " + new String(data));
 						} else {
 							break;
 						}
@@ -135,27 +134,28 @@ public class HashServer extends Thread {
 							pw.close();
 							soc.close();
 							e.printStackTrace();
-							Log.log("[Exception]: Server", Constant.Log.IMPORTANT);
-
-							break;
+							Log.log("[HashServer.Client.run()]: HashServer", Constant.Log.EXCEPTION);
 						} catch (Exception ex) {
+							Log.log("[HashServer.Client.run()]: HashServer", Constant.Log.EXCEPTION);
 							ex.printStackTrace();
-							break;
 						}
-
+						break;
 					}
 				}
 				byte[] recept = new byte[readBytes];
-				Log.log("readBytes: " + readBytes, Constant.Log.TEMPORARY);
 				System.arraycopy(bbuf.array(), 0, recept, 0, readBytes);
 				String receptBody = new String(recept).replaceAll(".*\r\n", "");
-				System.out.println("recept: " + receptBody);
+				Log.loghr("[HashServer.Client.run()] recept -------------------------\n" + receptBody, Constant.Log.TEMPORARY);
 
 				if (!receptBody.equals("")) {
-					MiningManager.receptNonce(receptBody);
+					Report report;
+					if((report = MiningManager.verifyMining(receptBody)) != null) {
+						FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.REPORT, report));
+					}
 				}
 
 				pw.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json);
+				Log.loghr("[HashServer.Client.run()] send ---------------------------\n" + "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json, Constant.Log.TEMPORARY);
 				pw.flush();
 				br.close();
 				pw.close();
@@ -163,9 +163,8 @@ public class HashServer extends Thread {
 				is.close();
 			} catch (IOException e) {
 				e.printStackTrace();
-				Log.log("[Exception]: Server", Constant.Log.EXCEPTION);
+				Log.log("[HashServer.Client.run()]: ", Constant.Log.EXCEPTION);
 			}
-			Log.log("[Client.run()] end");
 		}
 	}
 

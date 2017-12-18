@@ -1,5 +1,6 @@
 package V1.TestClient;
 
+import java.io.File;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,10 @@ import V1.Library.TofuError.SettingError;
 import V1.Library.TofuException.AddressFormatException;
 
 public class Setting {
+	static final String BLOCKCHAIN_BIN_DIR = System.getProperty("user.dir") + File.separator + ".." + File.separator + "data"+File.separator + "blockchain"+File.separator;
+	static final String TRUSTED_FRONTEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"frontendServer"+File.separator;
+	static final String TRUSTED_BACKEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"backendServer"+File.separator;
+
 	private static final String address = "Be4qVLKM2PtucWukmUUc6s2CrcbQNH7PRnMbcssMwG6S";
 	private static final String privateKey = "B7977D40B2A3B73D12E23609DC29F8900C27EAD559D8457E019BBE0EE2F4948E";
 	private static final String publicKey = "229A26A100180C73A8571AC266047200591A08713C1CE73D97A53E837CE336EF40FDDF59442F74574A5148EDD2FFEC1F50C3E52454A0A6A397B968D0FC5B5825";

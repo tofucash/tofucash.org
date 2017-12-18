@@ -91,8 +91,7 @@ public class TestFrontendClient {
 			block.addTransaction(tx);
 			work = new Work(new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02});
 
-//			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK_REQUEST, work);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK_UNDERTAKE, new Work());
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK, work);
 			
 			Log.log("no: " + no, Constant.Log.TEMPORARY);
 			try {

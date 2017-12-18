@@ -15,5 +15,9 @@ public class Log {
 		log(content);
 		log("-----------------------------------------------");
 	}
+	public static void loghr(String content, String level) {
+		log(content, level);
+		log("-----------------------------------------------", level);
+	}
 }
 

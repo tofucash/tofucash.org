@@ -38,6 +38,7 @@ public class Constant {
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
 		public static final int BYTE_TX_HASH = Transaction.BYTE_TX_HASH;
+		public static final String DEFAULT_TARGET = "0fffff0000000000000000000000000000000000000000000000000000000000";
 	}
 	public static class Blockchain {
 		private Blockchain() {
@@ -54,8 +55,6 @@ public class Constant {
 		public static final int BLOCK_BROADCAST = NetworkObject.BLOCK_BROADCAST;
 		public static final int TX_BROADCAST = NetworkObject.TX_BROADCAST;
 		public static final int NODE_BROADCAST = NetworkObject.NODE_BROADCAST;
-		
-
 
 	}
 
@@ -77,6 +76,12 @@ public class Constant {
 		}
 		public static final int BYTE_BUF = 1024;
 	}
+	public static class MerkleTree {
+		private MerkleTree() {
+		}
+		public static final int BYTE_MERKLE_ROOT = 64;
+
+	}
 
 	public static class NetworkObject {
 		private NetworkObject() {
@@ -91,15 +96,13 @@ public class Constant {
 		public static final int NODE_BROADCAST = 310;
 
 		public static final int WORK = 600;
-		public static final int WORK_REQUEST = 610;
-		public static final int WORK_UNDERTAKE = 620;
 
 		public static final int REPORT = 700;
 		
 		
-		public static final int BYTE_MAX_HASH = 512;
-		public static final int BYTE_MAX_NONCE = 512;
-		public static final int BYTE_MAX_MINER = 512;
+		public static final int BYTE_MAX_HASH = 64;
+		public static final int BYTE_MAX_NONCE = 64;
+		public static final int BYTE_MAX_MINER = 64;
 		
 	}
 	public static class Node {
@@ -151,7 +154,7 @@ public class Constant {
 
 		public static final int MAX_INPUT_OUTPUT = 31;
 		
-		public static final int BYTE_MAX_SIGNATURE = 512;
+		public static final int BYTE_MAX_SIGNATURE = 64;
 	}
 	public static class Time {
 		private Time() {}

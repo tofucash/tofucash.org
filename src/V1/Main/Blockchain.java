@@ -38,7 +38,7 @@ public class Blockchain {
 	private static Block block;
 	private static int blockHeight;
 
-	private static byte[] difficulty;
+	private static byte[] target;
 	private static int currentTxFee;
 
 	private static Map<Integer, List<byte[]>> prevBlockHashTable;
@@ -47,8 +47,8 @@ public class Blockchain {
 	static void init() {
 		blockHeight = 1;
 
-		difficulty = new byte[Constant.Blockchain.BYTE_BLOCK_HASH];
-		block = new Block(difficulty);
+		target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
+		block = new Block(target);
 		currentTxFee = 0;
 
 		prevBlockHashTable = new HashMap<Integer, List<byte[]>>();
@@ -109,7 +109,7 @@ public class Blockchain {
 	static boolean addBlock(NetworkObject no) {
 		// TODO check fork (utxo)
 		// TODO check Merkle tree
-		// TODO update difficulty
+		// TODO update target
 		Block newBlock = no.getBlock();
 		int i;
 		Iterator<Input> inputIt;
@@ -153,8 +153,9 @@ public class Blockchain {
 	}
 	static boolean goToNextBlock(Block newBlock, boolean broadcast) {
 		try {
+			Log.log("[Blockchain.goToNextBlock()] Save block: " + block);
 			IO.fileWrite(Setting.BLOCKCHAIN_BIN_DIR + (blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
-					+ File.separator + blockHeight, ByteUtil.getByteObject(newBlock));
+					+ File.separator, ""+blockHeight, ByteUtil.getByteObject(newBlock));
 		} catch (Exception e) {
 			e.printStackTrace();
 			Log.log("invalid block data", Constant.Log.EXCEPTION);
@@ -180,7 +181,7 @@ public class Blockchain {
 			BackendServer.shareBackend(new NetworkObject(Constant.Blockchain.BLOCK_BROADCAST, newBlock));
 		}
 
-		block = new Block(difficulty);
+		block = new Block(target);
 		blockHeight++;
 
 		return true;

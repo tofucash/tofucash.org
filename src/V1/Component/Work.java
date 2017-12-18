@@ -12,22 +12,22 @@ import V1.Library.Constant;
 public class Work implements Externalizable {
 	private static final long serialVersionUID = 199603310801000L;
 	private byte[] hash;
-	private byte[] difficulty;
+	private byte[] target;
 
 	public Work() {
 		hash = new byte[] {0x0};
-		difficulty = new byte[] {0x0};
+		target = new byte[] {0x0};
 	}
-	public Work(byte[] hash, byte[] difficulty) {
+	public Work(byte[] hash, byte[] target) {
 		this.hash = hash;
-		this.difficulty = difficulty;
+		this.target = target;
 	}
 
 	public byte[] getHash() {
 		return hash;
 	}
-	public byte[] getDifficulty() {
-		return difficulty;
+	public byte[] getTarget() {
+		return target;
 	}
 
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
@@ -38,23 +38,23 @@ public class Work implements Externalizable {
 		hash = new byte[hashLength];
 		oi.read(hash);
 
-		int difficultyLength = oi.readInt();
-		if (difficultyLength > Constant.Work.BYTE_MAX_HASH) {
+		int targetLength = oi.readInt();
+		if (targetLength > Constant.Work.BYTE_MAX_HASH) {
 			return;
 		}
-		difficulty = new byte[difficultyLength];
-		oi.read(difficulty);
+		target = new byte[targetLength];
+		oi.read(target);
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeInt(hash.length);
 		oo.write(hash);
-		oo.writeInt(difficulty.length);
-		oo.write(difficulty);
+		oo.writeInt(target.length);
+		oo.write(target);
 	}
 	
 	public String toString() {
-		return "[hash: " + DatatypeConverter.printHexBinary(hash) + ", difficulty: " + DatatypeConverter.printHexBinary(difficulty)+"]";
+		return "[hash: " + DatatypeConverter.printHexBinary(hash) + ", target: " + DatatypeConverter.printHexBinary(target)+"]";
 	}
 
 }

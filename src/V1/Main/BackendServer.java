@@ -34,6 +34,7 @@ import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
+import V1.Library.Mining;
 
 public class BackendServer extends Thread{
 	private static List<byte[]> receptDataHashList;
@@ -61,7 +62,7 @@ public class BackendServer extends Thread{
 	public void run() {
 		try {
 			ServerSocket ss = new ServerSocket(Constant.Server.SERVER_PORT);
-			Log.log("Server ready.");
+			Log.log("BackendServer ready.");
 
 			while (true) {
 				try {
@@ -70,7 +71,7 @@ public class BackendServer extends Thread{
 					if(backendTable.containsKey(remoteIp)) {
 						new Client(soc, remoteIp).start();		
 					} else {
-						Log.log("access denied not trusted ip [" + remoteIp + "]");
+						Log.log("Access denied not trusted ip [" + remoteIp + "]");
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -111,12 +112,11 @@ public class BackendServer extends Thread{
 						int readBytes = -1;
 						byte[] data;
 						int available = is.available();
-						Log.log("[Client.run()] is.available(): " + available, Constant.Log.TEMPORARY);
 						if (available > 0 && (readBytes = is.read(buffer)) > 1) {
 							baos.write(buffer, 0, readBytes);
 							data = baos.toByteArray();
 							bbuf.put(data);
-							pw.println("Your data is accepted.");
+							pw.println("[BackendServer] Message: Your data is accepted.");
 							pw.flush();
 						} else {
 							break;
@@ -128,13 +128,12 @@ public class BackendServer extends Thread{
 							pw.close();
 							soc.close();
 							e.printStackTrace();
-							Log.log("[Exception]: Server", Constant.Log.IMPORTANT);
-
-							break;
+							Log.log("[BackendServer.Client.run()]: BackendServer", Constant.Log.EXCEPTION);
 						} catch (Exception ex) {
 							ex.printStackTrace();
-							break;
+							Log.log("[BackendServer.Client.run()]: BackendServer", Constant.Log.EXCEPTION);
 						}
+						break;
 
 					}
 				}
@@ -145,7 +144,7 @@ public class BackendServer extends Thread{
 				is.close();
 			} catch (IOException e) {
 				e.printStackTrace();
-				Log.log("[Exception]: Server", Constant.Log.EXCEPTION);
+				Log.log("[BackendServer.Client.run()]: BackendServer", Constant.Log.EXCEPTION);
 			}
 		}
 	}
@@ -161,10 +160,11 @@ public class BackendServer extends Thread{
 			e.printStackTrace();
 			return;
 		}
+		Log.log("[BackendServer.receptNetworkObject()] no: " + no, Constant.Log.TEMPORARY);
 		try {
 			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
 			if (ByteUtil.contains(receptDataHashList, hash)) {
-				Log.log("already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
+				Log.log("[BackendServer.receptNetworkObject()] Already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.IMPORTANT);
 				return;
 			} else {
 				receptDataHashList.add(hash);
@@ -174,11 +174,10 @@ public class BackendServer extends Thread{
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			Log.log("invalid NetworkObject", Constant.Log.EXCEPTION);
+			Log.log("[BackendServer.receptNetworkObject()] Invalid NetworkObject", Constant.Log.EXCEPTION);
 			return;
 		}
 
-		Log.log("[Client.run()] no: " + no, Constant.Log.TEMPORARY);
 
 		if (no.getType() == Constant.NetworkObject.TX || no.getType() == Constant.NetworkObject.TX_BROADCAST) {
 			Blockchain.addTransaction(no);
@@ -196,12 +195,12 @@ public class BackendServer extends Thread{
 				return;
 			}
 		} else if (no.getType() == Constant.NetworkObject.REPORT) {
-			MiningManager.verfiyMining(no.getReport());
+			if(MiningManager.verifyMining(no.getReport())) {
+				Blockchain.nonceFound(no.getReport().getNonce(), no.getReport().getMiner());
+			}
 			return;
 		}
-		Log.log("Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
-		Log.log(no.toString(), Constant.Log.EXCEPTION);
-
+		Log.log("[BackendServer.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]: " + no, Constant.Log.EXCEPTION);
 	}
 	static void shareBackend(NetworkObject no) {
 		if (!Setting.BROADCAST_BACKEND) {
@@ -223,7 +222,6 @@ public class BackendServer extends Thread{
 			try {
 				InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
 				socket.connect(socketAddress, 30000);
-				Log.log("buffersize: " + socket.getSendBufferSize(), Constant.Log.TEMPORARY);
 
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				ObjectOutputStream oos = null;
@@ -251,7 +249,7 @@ public class BackendServer extends Thread{
 
 				char[] cline = new char[is1.available()];
 				br1.read(cline);
-				Log.log("[Server.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+				Log.log("[BackendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
 
 				baos.close();
 				oos.close();

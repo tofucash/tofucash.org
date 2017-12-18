@@ -18,6 +18,8 @@ import java.util.List;
 
 import org.omg.CORBA_2_3.portable.InputStream;
 
+import V1.Main.Setting;
+
 public class IO {
 	public static boolean isDirectory(String dirPath) {
 		return (new File(dirPath)).isDirectory();
@@ -43,30 +45,17 @@ public class IO {
 	// }
 	// return true;
 	// }
+	public static void createDir(String path) {
+		File file = new File(path);
+		if(!file.exists()) {
+			file.mkdirs();
+		}
+	}
 
-	// public static boolean fileWrite(String path, String content) {
-	// try {
-	// File file = new File(path);
-	// if (!file.exists()) {
-	// file.createNewFile();
-	// }
-	// if (file.isFile() && file.canWrite()) {
-	// PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(file,
-	// false)));
-	// pw.print(content);
-	// pw.close();
-	// } else {
-	// Log.log("cannot write file", Constant.Log.IMPORTANT);
-	// }
-	// } catch (Exception e) {
-	// Log.log("cannot write file", Constant.Log.IMPORTANT);
-	// e.printStackTrace();
-	// }
-	// }
-
-	public static void fileWrite(String path, byte[] data) {
+	public static void fileWrite(String dir, String path, byte[] data) {
+		IO.createDir(dir);
 		try {
-			FileOutputStream fos = new FileOutputStream(path);
+			FileOutputStream fos = new FileOutputStream(dir+path);
 			fos.write(data);
 			fos.close();
 		} catch (IOException e) {
@@ -104,19 +93,4 @@ public class IO {
 		}
 		return builder.toString();
 	}
-
-	public static Object createSendMessageObject(byte[] objByte) {
-		Object obj = null;
-		try {
-			ByteArrayInputStream byteis = new ByteArrayInputStream(objByte);
-			ObjectInputStream objis = new ObjectInputStream(byteis);
-			obj = objis.readObject();
-			byteis.close();
-			objis.close();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		return obj;
-	}
-
 }

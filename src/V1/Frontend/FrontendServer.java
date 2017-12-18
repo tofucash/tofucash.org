@@ -120,7 +120,6 @@ public class FrontendServer extends Thread{
 						int readBytes = -1;
 						byte[] data;
 						int available = is.available();
-						Log.log("[Client.run()] is.available(): " + available, Constant.Log.TEMPORARY);
 						if (available > 0 && (readBytes = is.read(buffer)) > 1) {
 							baos.write(buffer, 0, readBytes);
 							data = baos.toByteArray();
@@ -135,13 +134,12 @@ public class FrontendServer extends Thread{
 							pw.close();
 							soc.close();
 							e.printStackTrace();
-							Log.log("[Exception]: Server", Constant.Log.IMPORTANT);
-
-							break;
+							Log.log("[FrontendServer.Client.run()]: FrontendServer", Constant.Log.EXCEPTION);
 						} catch (Exception ex) {
 							ex.printStackTrace();
-							break;
+							Log.log("[FrontendServer.Client.run()]: FrontendServer", Constant.Log.EXCEPTION);
 						}
+						break;
 
 					}
 				}				
@@ -152,9 +150,8 @@ public class FrontendServer extends Thread{
 				is.close();
 			} catch (IOException e) {
 				e.printStackTrace();
-				Log.log("[Exception]: Server", Constant.Log.EXCEPTION);
+				Log.log("[FrontendServer.Client.run()]: FrontendServer", Constant.Log.EXCEPTION);
 			}
-			Log.log("[Client.run()] end");
 		}
 	}
 	static void receptNetworkObject(ByteBuffer bbuf, String remoteIp, PrintWriter pw) {
@@ -201,7 +198,7 @@ public class FrontendServer extends Thread{
 				Log.log(backendTable.toString());
 				return;
 			}
-		} else if (no.getType() == Constant.NetworkObject.WORK_REQUEST) {
+		} else if (no.getType() == Constant.NetworkObject.WORK) {
 			MiningManager.receptWork(no, pw);
 			return;
 		}
@@ -214,6 +211,7 @@ public class FrontendServer extends Thread{
 			Log.log("BROADCAST_BACKEND false");
 			return;
 		}
+		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
 		broadcast(no, backendTable);
 	}
 	static void shareFrontend(Work work) {
@@ -223,10 +221,10 @@ public class FrontendServer extends Thread{
 			return;
 		}
 		NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK, work);
+		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
 		broadcast(no, frontendTable);
 	}
 	private static void broadcast(NetworkObject no, Map<String, Node> remote) {
-		Log.log("broadcast no: " + no, Constant.Log.TEMPORARY);
 		for (Node node : remote.values()) {
 			Socket socket = new Socket();
 			Log.log("[FrontendServer.broadcast()] to: " + node.getIp());
@@ -261,7 +259,7 @@ public class FrontendServer extends Thread{
 
 				char[] cline = new char[is1.available()];
 				br1.read(cline);
-				Log.log("[Server.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+				Log.log("[FrontendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
 
 				baos.close();
 				oos.close();

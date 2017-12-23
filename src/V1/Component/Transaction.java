@@ -96,18 +96,21 @@ public class Transaction implements Externalizable {
 		signature = new byte[sigLength];
 		oi.read(signature);
 		inCnt = oi.readInt();
-		if (inCnt >= Constant.Transaction.MAX_INPUT_OUTPUT) {
+		if (inCnt > Constant.Transaction.MAX_INPUT_OUTPUT) {
 			return;
 		}
-		in = (Input[]) oi.readObject();
+		in = new Input[inCnt];
+		for(int i = 0; i < inCnt; i++) {
+			in[i] = (Input) oi.readObject();
+		}
 		outCnt = oi.readInt();
-		if (outCnt >= Constant.Transaction.MAX_INPUT_OUTPUT) {
+		if (outCnt > Constant.Transaction.MAX_INPUT_OUTPUT) {
 			return;
 		}
-		out = (Output[]) oi.readObject();
-		removeNull();
-		Log.log("in list :" + Arrays.toString(in), Constant.Log.TEMPORARY);
-		Log.log("out list:" + Arrays.toString(out), Constant.Log.TEMPORARY);
+		out = new Output[outCnt];
+		for(int i = 0; i < outCnt; i++) {
+			out[i] = (Output) oi.readObject();			
+		}
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
@@ -116,8 +119,13 @@ public class Transaction implements Externalizable {
 		oo.writeInt(signature.length);
 		oo.write(signature);
 		oo.writeInt(in.length);
-		oo.writeObject(in);
+		for(int i = 0; i < in.length; i++) {
+			oo.writeObject(in[i]);
+		}
 		oo.writeInt(out.length);
+		for(int i = 0; i < out.length; i++) {
+			oo.writeObject(out[i]);
+		}
 		oo.writeObject(out);
 	}
 

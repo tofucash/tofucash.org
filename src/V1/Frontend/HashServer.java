@@ -29,12 +29,15 @@ import javax.xml.bind.DatatypeConverter;
 import V1.Component.NetworkObject;
 import V1.Component.Node;
 import V1.Component.Report;
+import V1.Component.Request;
+import V1.Component.Transaction;
 import V1.Component.Work;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
+import V1.Library.TofuError;
 
 public class HashServer extends Thread {
 	private static List<String> blacklist;
@@ -43,10 +46,6 @@ public class HashServer extends Thread {
 	static void init() {
 		blacklist = new ArrayList<String>();
 		accessTable = new HashMap<String, Integer>();
-	}
-
-	static Map<String, Integer> getAccesstable() {
-		return accessTable;
 	}
 
 	public void run() {
@@ -102,11 +101,14 @@ public class HashServer extends Thread {
 			ByteArrayOutputStream baos = null;
 			ByteBuffer bbuf = ByteBuffer.allocate(Constant.Server.SERVER_BUF);
 			Work work = MiningManager.getWork();
-			String json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget())
-					+ "\", \"hash\": \"" + DatatypeConverter.printHexBinary(work.getHash()) + "\", \"start\": \""
-					+ DatatypeConverter.printHexBinary(calcStart(work.getHash(), remoteIp)) + "\", \"cnt\": \""
+			String json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget()) + "\", \"hash\": \""
+					+ DatatypeConverter.printHexBinary(work.getHash()) + "\", \"start\": \""
+					+ DatatypeConverter.printHexBinary(calcNonceStart(work.getHash(), remoteIp)) + "\", \"cnt\": \""
 					+ Constant.Server.NONCE_CNT + "\", \"algo\": \"" + Constant.Server.HASH_ALGO + "\"}";
 			int readBytes = 0;
+			String receptBody = "";
+			Report report = null;
+			Request request = null;
 
 			try {
 				br = new BufferedReader(new InputStreamReader(soc.getInputStream()));
@@ -144,18 +146,28 @@ public class HashServer extends Thread {
 				}
 				byte[] recept = new byte[readBytes];
 				System.arraycopy(bbuf.array(), 0, recept, 0, readBytes);
-				String receptBody = new String(recept).replaceAll(".*\r\n", "");
-				Log.loghr("[HashServer.Client.run()] recept -------------------------\n" + receptBody, Constant.Log.TEMPORARY);
-
+				receptBody = new String(recept).replaceAll(".*\r\n", "");
 				if (!receptBody.equals("")) {
-					Report report;
-					if((report = MiningManager.verifyMining(receptBody)) != null) {
-						FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.REPORT, report));
+					if ((report = MiningManager.verifyMining(receptBody)) != null) {
+						Log.log("[HashServer.Client.run()] report: " + report, Constant.Log.IMPORTANT);
+					} else if ((request = RequestManager.verifyRequest(receptBody)) != null) {
+						Log.log("[HashServer.Client.run()] request: " + request, Constant.Log.TEMPORARY);
+						if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
+						} else if (request.getType() == Constant.Request.TYPE_CHECK_BALANCE) {
+							json = DataManager.getBalance(request);
+						} else {
+							throw new TofuError.UnimplementedError("[HashServer.Client.run()]  Unknown Request Type");
+						}
 					}
 				}
+				Log.loghr("[HashServer.Client.run()] recept -------------------------\n" + receptBody,
+						Constant.Log.TEMPORARY);
 
 				pw.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json);
-				Log.loghr("[HashServer.Client.run()] send ---------------------------\n" + "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json, Constant.Log.TEMPORARY);
+				Log.loghr(
+						"[HashServer.Client.run()] send ---------------------------\n"
+								+ "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json,
+						Constant.Log.TEMPORARY);
 				pw.flush();
 				br.close();
 				pw.close();
@@ -164,11 +176,29 @@ public class HashServer extends Thread {
 			} catch (IOException e) {
 				e.printStackTrace();
 				Log.log("[HashServer.Client.run()]: ", Constant.Log.EXCEPTION);
+				try {
+					pw.flush();
+					br.close();
+					pw.close();
+					isr.close();
+					is.close();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+					Log.log("[HashServer.Client.run()]: ", Constant.Log.EXCEPTION);
+				}
+			}
+			if(report != null) {
+				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REPORT, report));
+			} else if(request != null) {
+				if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
+					FrontendServer.shareBackend(
+							new NetworkObject(Constant.NetworkObject.TYPE_TX, DataManager.makeTx(request)));	
+				}			
 			}
 		}
 	}
 
-	static byte[] calcStart(byte[] hash, String remoteIp) {
+	static byte[] calcNonceStart(byte[] hash, String remoteIp) {
 		ByteBuffer bbuf = ByteBuffer.allocate(Constant.NetworkObject.BYTE_MAX_NONCE + 15);
 		// 255.255.255.255 <- ip address max is 15byte ... IPv6??
 		bbuf.put(hash);

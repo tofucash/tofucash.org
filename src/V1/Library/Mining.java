@@ -12,6 +12,8 @@ public class Mining {
 	public static boolean verifyMining(Work work, Report report) {
 		byte[] hash = report.getHash();
 		if(!Arrays.equals(hash, work.getHash())) {
+			Log.log("report.hash: " + DatatypeConverter.printHexBinary(report.getHash()));
+			Log.log("  work.hash: " + DatatypeConverter.printHexBinary(work.getHash()));
 			Log.log("[MiningManager.verifyMining()] Unnecessary Hash", Constant.Log.IMPORTANT); 
 			return false;
 		}

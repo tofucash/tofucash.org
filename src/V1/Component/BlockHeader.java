@@ -41,7 +41,7 @@ public class BlockHeader implements Externalizable {
 		this.timestamp = timestamp;
 		this.miner = miner;
 		this.target = target;
-		this.nonce = null;
+		this.nonce = new byte[Constant.Block.BYTE_NONCE];
 		this.merkleRoot = new byte[Constant.MerkleTree.BYTE_MERKLE_ROOT];
 	}
 
@@ -140,7 +140,7 @@ public class BlockHeader implements Externalizable {
 	}
 
 	public String toString() {
-		return "[version: " + version + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
+		return "[version: " + version + ", blockHeight: "+blockHeight + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
 				+ ", timestamp: " + DatatypeConverter.printHexBinary(timestamp) + ", miner: "
 				+ DatatypeConverter.printHexBinary(miner) + ", nonce: " + DatatypeConverter.printHexBinary(nonce)
 				+ ", MerkleTree: " + DatatypeConverter.printHexBinary(merkleRoot) + "]";

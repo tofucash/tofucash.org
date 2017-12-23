@@ -42,15 +42,15 @@ public class TestBackendClient {
 	public static void main(String[] args) {
 		init();
 		test1();
-		// makeTrustedServerFile();
+//		 makeTrustedServerFile();
 		// accessTest();
 	}
 
 	static void makeTrustedServerFile() {
 		String fileName, ip, nodeName, dirName;
 		Node node;
-		dirName = "frontendServer";
-		ip = "0.0.0.0";
+		dirName = "backendServer";
+		ip = "212.24.106.144";
 		fileName = ip + ".conf";
 		nodeName = "euro";
 		node = new Node(ip, Constant.Server.SERVER_PORT, nodeName, Setting.getAddress(), Setting.getKeyPair());
@@ -69,10 +69,11 @@ public class TestBackendClient {
 		keyPair = Address.createKeyPair();
 		System.out.println("private: " + DatatypeConverter.printHexBinary(keyPair.getPrivate().getEncoded()));
 		System.out.println("public: " + DatatypeConverter.printHexBinary(keyPair.getPublic().getEncoded()));
-		System.out.println("private: " + keyPair.getPrivate().getEncoded().length);
-		System.out.println("public: " + keyPair.getPublic().getEncoded().length);
-		System.out.println("address: " + Base58.encode(Address.getAddress(keyPair.getPublic())));
-		System.out.println("address: " + Address.getAddress(keyPair.getPublic()).length);
+		String address = Base58.encode(Address.getAddress(keyPair.getPublic()));
+		System.out.println("address: " + address);
+		System.out.println("private length: " + keyPair.getPrivate().getEncoded().length);
+		System.out.println("public length: " + keyPair.getPublic().getEncoded().length);
+		System.out.println("address length: " + address.length());
 		String text = "11月には全体が動くようにしたい...";
 		byte[] sign = Crypto.sign(keyPair.getPrivate(), keyPair.getPublic(), text.getBytes());
 		System.out.println("sign: " + DatatypeConverter.printHexBinary(sign));
@@ -124,7 +125,7 @@ public class TestBackendClient {
 			node = new Node("192.168.56.1", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
 
 			tx = getTestTransaction();
-			block = new Block(new byte[] { 0x01, 0x4a, 0x02 });
+			block = new Block(1, new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
 			block.addTransaction(tx);
 
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.TX,
@@ -133,7 +134,7 @@ public class TestBackendClient {
 			// NetworkObject(Constant.NetworkObject.BLOCK, block);
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.NODE,
 			// node);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK,
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_WORK,
 					new Work(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 }));
 
 			Log.log("no: " + no, Constant.Log.TEMPORARY);
@@ -181,9 +182,9 @@ public class TestBackendClient {
 		byte[] script = new byte[1 + Constant.Address.BYTE_PUBLIC_KEY];
 		script[0] = OPCode.PUSH512;
 		System.arraycopy(Setting.getPublicKey(), 0, script, 1, Constant.Address.BYTE_PUBLIC_KEY);
-		in[0] = new Input(new byte[] { 0x01, 0x02, 0x03 }, 1, 1, new Answer(script));
-		out[0] = new Output(1, 9, new Question(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-				14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 }));
+		in[0] = new Input(new byte[] { 0x01, 0x02, 0x03 }, new byte[] { 0x01, 0x02, 0x03 }, new Answer(script));
+		out[0] = new Output(1,  new Question(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+				14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 }, Setting.getAddress()));
 		version = 0xffff;
 		lockTime = 100;
 		try {
@@ -194,3 +195,4 @@ public class TestBackendClient {
 		}
 	}
 }
+

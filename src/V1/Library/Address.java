@@ -15,10 +15,12 @@ import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPoint;
 import java.security.spec.ECPublicKeySpec;
 
+import javax.xml.bind.DatatypeConverter;
+
 public class Address {
 
-	public static byte[] getAddress(PublicKey publicKey) {
-		return Crypto.hashTwice(publicKey.getEncoded());
+	public static byte[] getAddress(PublicKey publicKey) {		
+		return Crypto.hashTwice(DatatypeConverter.parseHexBinary(DatatypeConverter.printHexBinary(publicKey.getEncoded()).substring(Constant.Address.BYTE_PUBLIC_KEY_PREFIX*2)));
 	}
 
 	public static byte[] createPrivateKey() {

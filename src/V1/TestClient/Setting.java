@@ -23,9 +23,9 @@ public class Setting {
 	static final String TRUSTED_FRONTEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"frontendServer"+File.separator;
 	static final String TRUSTED_BACKEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"backendServer"+File.separator;
 
-	private static final String address = "Be4qVLKM2PtucWukmUUc6s2CrcbQNH7PRnMbcssMwG6S";
-	private static final String privateKey = "B7977D40B2A3B73D12E23609DC29F8900C27EAD559D8457E019BBE0EE2F4948E";
-	private static final String publicKey = "229A26A100180C73A8571AC266047200591A08713C1CE73D97A53E837CE336EF40FDDF59442F74574A5148EDD2FFEC1F50C3E52454A0A6A397B968D0FC5B5825";
+	private static final String address = "8C4uHzpdVq5ZmCZxBWdbNt3L91pfEqxwS8AHsVwEMEnE552oyTz8YpwSvdZFuWQ2mTjLCjcH15Zjd9yttDMtNxBvE2ToZFcmrejx2TwbRrgyexJEtUX43E6T5dGh2xSk9vD4fG8f2RGMEARxiAq823ZmsKu8j8trDVFYpJmZfwx2ijS";
+	private static final String privateKey = "63CF6591947F69D40E7E3ABCE6FCE7466B0339A6B03C248346A07C489938A906";
+	private static final String publicKey = "0413433316B2BD3B861B509DAB0C99F6867391E72ADB29693ED6168ECC2873F21E15944C8FC970F0E9582382CA0DC991460C01E4297CC921382A5FF21D4E933413";
 
 	private static byte[] byteAddress;
 	private static byte[] bytePublicKey;

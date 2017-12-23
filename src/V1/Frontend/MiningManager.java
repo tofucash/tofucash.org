@@ -23,7 +23,7 @@ public class MiningManager {
 	static void init() {
 		byte[] decoy = new byte[Constant.Work.BYTE_MAX_HASH];
 		byte[] target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
-//		Arrays.fill(decoy, (byte) 0xff);
+		// Arrays.fill(decoy, (byte) 0xff);
 		work = new Work(decoy, target);
 		Log.log("MiningManager init done.");
 	}
@@ -38,16 +38,19 @@ public class MiningManager {
 	}
 
 	static Report verifyMining(String json) {
-		Map map = (Map) JSON.decode(json);
-		byte[] hash = DatatypeConverter.parseHexBinary((String) map.get("hash"));
-		byte[] nonce = DatatypeConverter.parseHexBinary((String) map.get("nonce"));
-		byte[] result = DatatypeConverter.parseHexBinary((String) map.get("result"));
-		byte[] miner = DatatypeConverter.parseHexBinary((String) map.get("miner"));
-		Report report = new Report(hash, nonce, result, miner);
-		if(Mining.verifyMining(work, report)) {
-			return report;
-		} else {
-			return null;
+		try {
+			Map map = (Map) JSON.decode(json);
+			byte[] hash = DatatypeConverter.parseHexBinary((String) map.get("hash"));
+			byte[] nonce = DatatypeConverter.parseHexBinary((String) map.get("nonce"));
+			byte[] result = DatatypeConverter.parseHexBinary((String) map.get("result"));
+			byte[] miner = DatatypeConverter.parseHexBinary((String) map.get("miner"));
+			Report report = new Report(hash, nonce, result, miner);
+			if (Mining.verifyMining(work, report)) {
+				return report;
+			}
+		} catch (Exception e) {
+			Log.log("[MiningManager.verifyMining()] Not Answer JSON");
 		}
+		return null;
 	}
 }

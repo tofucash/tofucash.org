@@ -40,8 +40,8 @@ public class Block implements Externalizable {
 		merkleTree = null;
 		txHashList = null;
 	}
-	public Block(byte[] target) {
-		header = new BlockHeader(Constant.BlockHeader.VERSION, -1, new byte[Constant.Block.BYTE_BLOCK_HASH],
+	public Block(int blockHeight, byte[] prevBlockHash, byte[] target) {
+		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, prevBlockHash,
 				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS], target);
 		txList = new Transaction[Constant.Block.MAX_TX];
 		merkleTree = new ArrayList<byte[]>();

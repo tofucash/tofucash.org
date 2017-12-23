@@ -10,7 +10,7 @@ public class Setting {
 	static final String TRUSTED_FRONTEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"frontendServer"+File.separator;
 	static final String TRUSTED_BACKEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"backendServer"+File.separator;
 	
-	static final boolean BROADCAST_FRONTEND = false;
+	static final boolean BROADCAST_FRONTEND = true;
 	static final boolean BROADCAST_BACKEND = false;
 
 	static void init() {

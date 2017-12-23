@@ -50,7 +50,11 @@ public class Tofucoin {
 	}
 	
 	private static void testInit() {
-		Blockchain.setTestData();
+		try {
+			Blockchain.setTestData();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	private static void init() {
 		Log.init();

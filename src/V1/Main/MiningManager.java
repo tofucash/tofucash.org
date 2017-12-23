@@ -22,15 +22,16 @@ public class MiningManager {
 	private static Work work;
 	static void init() {
 		byte[] decoy = new byte[Constant.Work.BYTE_MAX_HASH];
-		Arrays.fill(decoy, (byte) 0xff);
-		work = new Work(decoy, decoy);
+		byte[] target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
+//		Arrays.fill(decoy, (byte) 0xff);
+		work = new Work(decoy, target);
 		Log.log("MiningManager init done.");
 	}
 
 	static void updateMining(Block block) {
 		try {
-			work = new Work(Crypto.hash512(ByteUtil.getByteObject(block.getBlockHeader())), Crypto.hash512(ByteUtil.getByteObject(block.getTarget())));
-			BackendServer.shareFrontend(work);
+			work = new Work(Crypto.hash512(ByteUtil.getByteObject(block.getBlockHeader())), block.getTarget());
+			BackendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_WORK, work));
 		} catch (Exception e) {
 			e.printStackTrace();
 			Log.log("[MiningManager.updateMining()] Invalid block", Constant.Log.EXCEPTION);

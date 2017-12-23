@@ -84,7 +84,7 @@ public class Crypto {
 	// }
 
 	public static byte[] hashTwice(byte[] data) {
-		return hash256(hash256(data));
+		return hash512(hash512(data));
 	}
 
 //	public static byte[] signature(byte[] data, PrivateKey key) {

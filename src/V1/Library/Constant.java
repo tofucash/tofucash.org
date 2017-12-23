@@ -18,14 +18,13 @@ public class Constant {
 		private Address() {
 		}
 
-		public static final int BYTE_ADDRESS = 32;
+		public static final int BYTE_ADDRESS = 128;
 		public static final int BYTE_PRIVATE_KEY = 64;
-		public static final int BYTE_PUBLIC_KEY = 64;
+		public static final int BYTE_PUBLIC_KEY = 65;
 		public static final int BYTE_PRIVATE_KEY_PREFIX = 32;
-		public static final int BYTE_PUBLIC_KEY_PREFIX = 24;
+		public static final int BYTE_PUBLIC_KEY_PREFIX = 23;
 		public static final String PRIVATE_KEY_PREFIX = "303E020100301006072A8648CE3D020106052B8104000A042730250201010420";
-		public static final String PUBLIC_KEY_PREFIX = "3056301006072A8648CE3D020106052B8104000A03420004";
-		public static final int BYTE_MAX_SIGNATURE = 72;
+		public static final String PUBLIC_KEY_PREFIX = "3056301006072A8648CE3D020106052B8104000A034200";
 	}
 
 	public static class Block {
@@ -37,8 +36,8 @@ public class Constant {
 		public static final int MAX_TX = (int) Math.pow(2, MAX_TX_POWER);
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
-		public static final int BYTE_TX_HASH = Transaction.BYTE_TX_HASH;
 		public static final String DEFAULT_TARGET = "0fffff0000000000000000000000000000000000000000000000000000000000";
+		public static final String DEFAULT_PREV_BLOCK_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 	}
 	public static class Blockchain {
 		private Blockchain() {
@@ -49,12 +48,13 @@ public class Constant {
 		public static final int BYTE_BLOCK_HASH = Block.BYTE_BLOCK_HASH;
 		public static final int TX_FEE = 1;
 
-		public static final int BLOCK = NetworkObject.BLOCK;
-		public static final int TX = NetworkObject.TX;
-		public static final int NODE = NetworkObject.NODE;
-		public static final int BLOCK_BROADCAST = NetworkObject.BLOCK_BROADCAST;
-		public static final int TX_BROADCAST = NetworkObject.TX_BROADCAST;
-		public static final int NODE_BROADCAST = NetworkObject.NODE_BROADCAST;
+		public static final int BLOCK = NetworkObject.TYPE_BLOCK;
+		public static final int TX = NetworkObject.TYPE_TX;
+		public static final int NODE = NetworkObject.TYPE_NODE;
+		public static final int BLOCK_BROADCAST = NetworkObject.TYPE_BLOCK_BROADCAST;
+		public static final int TX_BROADCAST = NetworkObject.TYPE_TX_BROADCAST;
+		public static final int NODE_BROADCAST = NetworkObject.TYPE_NODE_BROADCAST;
+		public static final int ADJUST_TARGET = 2016;
 
 	}
 
@@ -87,18 +87,22 @@ public class Constant {
 		private NetworkObject() {
 		}
 
-		public static final int BLOCK = 100;
-		public static final int TX = 200;
-		public static final int NODE = 300;
+		public static final int TYPE_BLOCK = 100;
+		public static final int TYPE_TX = 200;
+		public static final int TYPE_NODE = 300;
 
-		public static final int BLOCK_BROADCAST = 110;
-		public static final int TX_BROADCAST = 210;
-		public static final int NODE_BROADCAST = 310;
+		public static final int TYPE_BLOCK_BROADCAST = 110;
+		public static final int TYPE_TX_BROADCAST = 210;
+		public static final int TYPE_NODE_BROADCAST = 310;
 
-		public static final int WORK = 600;
+		public static final int TYPE_WORK = 600;
 
-		public static final int REPORT = 700;
+		public static final int TYPE_REPORT = 700;
+
+		public static final int TYPE_REQUEST = 800;
 		
+		public static final int TYPE_UTXO = 900;
+
 		
 		public static final int BYTE_MAX_HASH = 64;
 		public static final int BYTE_MAX_NONCE = 64;
@@ -111,7 +115,7 @@ public class Constant {
 		public static final int DEFAULT_PORT = Server.SERVER_PORT;
 		public static final int BYTE_ADDRESS = Address.BYTE_ADDRESS;
 		public static final int BYTE_PUBLIC_KEY = Address.BYTE_PUBLIC_KEY;
-		public static final int BYTE_MAX_SIGNATURE = Address.BYTE_MAX_SIGNATURE;
+		public static final int BYTE_MAX_SIGNATURE = Transaction.BYTE_MAX_SIGNATURE;
 		public static final int BYTE_PUBLIC_KEY_PREFIX = 24;
 	}
 	public static class Report {
@@ -120,6 +124,12 @@ public class Constant {
 		public static final int BYTE_MAX_HASH = NetworkObject.BYTE_MAX_HASH;
 		public static final int BYTE_MAX_NONCE = NetworkObject.BYTE_MAX_NONCE;
 		public static final int BYTE_MAX_MINER = NetworkObject.BYTE_MAX_MINER;
+	}
+	public static class Request {
+		private Request() {
+		}
+		public static final int TYPE_SEND_TOFU = 1000;
+		public static final int TYPE_CHECK_BALANCE = 2000;
 	}
 
 	public static class Server {
@@ -150,11 +160,12 @@ public class Constant {
 		public static final int OUTPUT_IS_NOT_ENOUGH = -1;
 
 		public static final int VERSION = 1;
-		public static final int BYTE_TX_HASH = 64;
+		public static final int BYTE_OUT_HASH = 64;
 
 		public static final int MAX_INPUT_OUTPUT = 31;
 		
-		public static final int BYTE_MAX_SIGNATURE = 64;
+		public static final int BYTE_MAX_SIGNATURE = 72;
+		public static final int DEFAULT_LOCKTIME = 1;
 	}
 	public static class Time {
 		private Time() {}
@@ -179,8 +190,8 @@ public class Constant {
 	public static class Script {
 		private Script() {
 		}
-		public static final int BYTE_MAX_ANSWER = 100;
-		public static final int BYTE_MAX_QUESTION = 100;
+		public static final int BYTE_MAX_ANSWER = 1000;
+		public static final int BYTE_MAX_QUESTION = 1000;
 		
 		public static final int LENGTH_REGISTER = 10;
 		
@@ -196,6 +207,7 @@ public class Constant {
 			public static byte PUSH72 = 0x14;	// push to stack
 			public static byte PUSH64 = 0x15;	// push to stack
 			public static byte PUSH32 = 0x16;	// push to stack
+			public static byte PUSH_MAX_512 = 0x17;	// PUSH_MAX_512 data.length data
 			
 			public static byte POP1_0 = 0x20;	// pop 1 byte to register1 from stack
 			
@@ -209,14 +221,18 @@ public class Constant {
 			public static byte CHECK_SIG = 0x50;	// sig
 			
 			public static byte DUP = 0x60;	// duplicate stack top data
-			public static byte DUP_PUSH = 0x61;	// duplicate stack top data and push
-			public static byte PUBK_DUP = 0x62;	// duplicate stack top data (attach public key prefix)
+			public static byte PUBK_DUP = 0x61;	// duplicate stack top data (attach public key prefix)
+//			public static byte DUP_PUSH = 0x62;	// duplicate stack top data and push
+			
+			public static byte CHECK_ADDR = 0x70;
+			
+			
 		}
 		public enum Result{
 			FAILED, SOLVED
 		}
 		public enum State {
-			OP, END, PUSH, POP
+			OP, END, PUSH, POP, PUSH_OPTION
 		}
 
 	}

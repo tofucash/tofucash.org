@@ -48,13 +48,13 @@ public class FrontendServer extends Thread{
 		frontendTable = new HashMap<String, Node>();
 		blacklist = new ArrayList<String>();
 		Node tmp;
-		for (File file : new File(Setting.TRUSTED_FRONTEND_DIR).listFiles()) {
-			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_FRONTEND_DIR + file.getName()));
-			frontendTable.put(tmp.getIp(), tmp);
-		}
 		for (File file : new File(Setting.TRUSTED_BACKEND_DIR).listFiles()) {
 			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_BACKEND_DIR + file.getName()));
 			backendTable.put(tmp.getIp(), tmp);
+		}
+		for (File file : new File(Setting.TRUSTED_FRONTEND_DIR).listFiles()) {
+			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_FRONTEND_DIR + file.getName()));
+			frontendTable.put(tmp.getIp(), tmp);
 		}
 		
 		Log.log("Server init done.");
@@ -63,22 +63,20 @@ public class FrontendServer extends Thread{
 	public void run() {
 		try {
 			ServerSocket ss = new ServerSocket(Constant.Server.SERVER_PORT);
-			Log.log("Server ready.");
+			Log.log("FrontendServer.init()] ready: port[ " + Constant.Server.SERVER_PORT+" ]");
 
 			while (true) {
 				try {
 					Socket soc = ss.accept();
 					String remoteIp = soc.getRemoteSocketAddress().toString().replaceAll("/(.*):.*", "$1");
-					if(!backendTable.containsKey(remoteIp)) {
-						Log.log("[Unknown node] access denied not trusted ip [" + remoteIp + "]");
-						soc.close();
-					} else if(blacklist.contains(remoteIp)) {
+					if(blacklist.contains(remoteIp)) {
 						Log.log("[Blacklist node] access denied not trusted ip [" + remoteIp + "]");
 						soc.close();
-					} else if(HashServer.getAccesstable().containsKey(remoteIp)) {
-						new Client(soc, remoteIp).start();						
-					} else {
+					} else if(backendTable.containsKey(remoteIp) || frontendTable.containsKey(remoteIp)) {
 						new Client(soc, remoteIp).start();
+					} else {
+						Log.log("[Unknown node] access denied not trusted ip [" + remoteIp + "]");
+						soc.close();
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -144,10 +142,13 @@ public class FrontendServer extends Thread{
 					}
 				}				
 				receptNetworkObject(bbuf, remoteIp, pw);
-				br.close();
+				pw.write("[Frontendserver.Client.run()] Accepted");
+				pw.flush();
 				pw.close();
+				br.close();
 				isr.close();
 				is.close();
+				soc.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 				Log.log("[FrontendServer.Client.run()]: FrontendServer", Constant.Log.EXCEPTION);
@@ -184,22 +185,25 @@ public class FrontendServer extends Thread{
 			return;
 		}
 
-		Log.log("[Client.run()] no: " + no, Constant.Log.TEMPORARY);
+		Log.log("[FrontendServer.receptNetworkObject()] no: " + no, Constant.Log.TEMPORARY);
 
-		if (no.getType() == Constant.NetworkObject.TX || no.getType() == Constant.NetworkObject.TX_BROADCAST) {
+		if (no.getType() == Constant.NetworkObject.TYPE_TX || no.getType() == Constant.NetworkObject.TYPE_TX_BROADCAST) {
 			return;
-		} else if (no.getType() == Constant.NetworkObject.BLOCK
-				|| no.getType() == Constant.NetworkObject.BLOCK_BROADCAST) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK
+				|| no.getType() == Constant.NetworkObject.TYPE_BLOCK_BROADCAST) {
 			return;
-		} else if (no.getType() == Constant.NetworkObject.NODE
-				|| no.getType() == Constant.NetworkObject.NODE_BROADCAST) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_NODE
+				|| no.getType() == Constant.NetworkObject.TYPE_NODE_BROADCAST) {
 			if(remoteIp.equals(no.getNode().getIp())) {
 				backendTable.put(remoteIp, no.getNode());
 				Log.log(backendTable.toString());
 				return;
 			}
-		} else if (no.getType() == Constant.NetworkObject.WORK) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK) {
 			MiningManager.receptWork(no, pw);
+			return;
+		} else if(no.getType() == Constant.NetworkObject.TYPE_UTXO) {
+			DataManager.addUTXO(no.getUTXO());
 			return;
 		}
 		Log.log("Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
@@ -220,14 +224,14 @@ public class FrontendServer extends Thread{
 			Log.log("BROADCAST_FRONTEND false");
 			return;
 		}
-		NetworkObject no = new NetworkObject(Constant.NetworkObject.WORK, work);
+		NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_WORK, work);
 		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
 		broadcast(no, frontendTable);
 	}
 	private static void broadcast(NetworkObject no, Map<String, Node> remote) {
 		for (Node node : remote.values()) {
 			Socket socket = new Socket();
-			Log.log("[FrontendServer.broadcast()] to: " + node.getIp());
+			Log.log("[FrontendServer.broadcast()] to: " + node.getIp()+":"+node.getPort());
 
 			try {
 				InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());

@@ -14,6 +14,7 @@ public class Frontend {
 		Setting.init();
 		MiningManager.init();
 		HashServer.init();
+		DataManager.init();
 		try {
 			FrontendServer.init();
 		} catch (Exception e) {

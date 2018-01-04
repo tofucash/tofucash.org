@@ -18,6 +18,8 @@ import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
+import V1.Library.MerkleTree;
+import V1.Library.Time;
 import V1.TestClient.Setting;
 import net.arnx.jsonic.JSON;
 
@@ -30,30 +32,26 @@ public class Block implements Externalizable {
 	private List<byte[]> merkleTree;
 	private List<byte[]> txHashList;
 
-	static void init() {
-		Log.log("Block init done.");
-	}
-
 	public Block() {
 		header = null;
 		txList = null;
 		merkleTree = null;
 		txHashList = null;
 	}
-	public Block(int blockHeight, byte[] prevBlockHash, byte[] target) {
-		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, prevBlockHash,
-				new byte[Constant.Time.BYTE_TIMESTAMP], new byte[Constant.Address.BYTE_ADDRESS], target);
+	public Block(int blockHeight) {
 		txList = new Transaction[Constant.Block.MAX_TX];
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
+		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, new byte[1],
+				0, new byte[Constant.Address.BYTE_ADDRESS], new byte[1]);
 	}
-
+	
 	public synchronized boolean addTransaction(Transaction tx) {
 		try {
 			txHashList.add(Crypto.hash256(ByteUtil.getByteObject(tx)));
 		} catch (Exception e) {
 			e.printStackTrace();
-			Log.log("invalid data", Constant.Log.EXCEPTION);
+			Log.log("[Block.addTransaction()] Invalid data", Constant.Log.EXCEPTION);
 			return false;
 		}
 		if (!MerkleTree.updateMerkleTree(merkleTree, txHashList)) {
@@ -85,10 +83,18 @@ public class Block implements Externalizable {
 	public byte[] getTarget() {
 		return header.getTarget();
 	}
+	public long getTimestamp() {
+		return header.getTimestamp();
+	}
 	public void nonceFound(byte[] nonce, byte[] miner) {
 		header.nonceFound(nonce, miner);
 	}
-
+	
+	public void updateHeader(byte[] prevBlockHash, byte[] target) {
+		long timestamp = Time.getTimestamp();
+		header.updateParam(timestamp, prevBlockHash, target);
+	}
+	
 	public void removeNull() {
 		List<Transaction> txListAsList = new ArrayList<Transaction>(Arrays.asList(txList));
 		txListAsList.removeAll(Collections.singleton(null));

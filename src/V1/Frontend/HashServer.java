@@ -30,7 +30,9 @@ import V1.Component.NetworkObject;
 import V1.Component.Node;
 import V1.Component.Report;
 import V1.Component.Request;
+import V1.Component.Spent;
 import V1.Component.Transaction;
+import V1.Component.UTXO;
 import V1.Component.Work;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
@@ -191,8 +193,10 @@ public class HashServer extends Thread {
 				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REPORT, report));
 			} else if(request != null) {
 				if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
+					Spent spent = new Spent(request.getAddrFrom(), request.getAddrFrom());
+					FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_SPENT, spent));
 					FrontendServer.shareBackend(
-							new NetworkObject(Constant.NetworkObject.TYPE_TX, DataManager.makeTx(request)));	
+							new NetworkObject(Constant.NetworkObject.TYPE_REQUEST, request));	
 				}			
 			}
 		}

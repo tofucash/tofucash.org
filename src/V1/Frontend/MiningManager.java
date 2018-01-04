@@ -31,6 +31,9 @@ public class MiningManager {
 	static void receptWork(final NetworkObject no, PrintWriter pw) {
 		work = no.getWork();
 		Log.log("[MiningManager.receptWork()] work update: " + work);
+		if(no.getType() == Constant.NetworkObject.TYPE_WORK) {
+			FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_WORK_BROADCAST, no.getWork()));
+		}
 	}
 
 	static Work getWork() {

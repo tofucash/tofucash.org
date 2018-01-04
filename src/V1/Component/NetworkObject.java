@@ -26,6 +26,7 @@ public class NetworkObject implements Externalizable {
 	private Report report;
 	private Request request;
 	private UTXO utxo;
+	private Spent spent;
 
 	public NetworkObject() {
 		block = null;
@@ -35,6 +36,7 @@ public class NetworkObject implements Externalizable {
 		report = null;
 		request = null;
 		utxo = null;
+		spent = null;
 	}
 
 	public NetworkObject(int type, Object data) {
@@ -46,6 +48,7 @@ public class NetworkObject implements Externalizable {
 		report = null;
 		request = null;
 		utxo = null;
+		spent = null;
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
 			block = (Block) data;
 			block.removeNull();
@@ -68,6 +71,8 @@ public class NetworkObject implements Externalizable {
 			request = (Request) data;
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			utxo = (UTXO) data;
+		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
+			spent = (Spent) data;
 		} else {
 			throw new TofuError.UnimplementedError("Invalid NetworkObject Type");
 		}
@@ -99,6 +104,9 @@ public class NetworkObject implements Externalizable {
 	public UTXO getUTXO() {
 		return utxo;
 	}
+	public Spent getSpent() {
+		return spent;
+	}
 	public String toString() {
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
 			return "[type: " + type + ", block: " + block.toString() + "]";
@@ -114,6 +122,8 @@ public class NetworkObject implements Externalizable {
 			return "[type: " + type + ", request: " + request + "]";
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			return "[type: " + type + ", utxo: " + utxo + "]";
+		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
+			return "[type: " + type + ", spent: " + spent + "]";
 		} else {
 			throw new TofuError.UnimplementedError("unknown type");
 		}
@@ -136,6 +146,8 @@ public class NetworkObject implements Externalizable {
 			request = (Request) oi.readObject();
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			utxo = (UTXO) oi.readObject();
+		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
+			spent = (Spent) oi.readObject();
 		}
 	}
 
@@ -156,6 +168,8 @@ public class NetworkObject implements Externalizable {
 			oo.writeObject(request);
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			oo.writeObject(utxo);
+		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
+			oo.writeObject(spent);
 		}
 	}
 }

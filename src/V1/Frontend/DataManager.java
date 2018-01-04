@@ -29,49 +29,6 @@ public class DataManager {
 		utxoTable = new UTXO();
 	}
 
-	static Transaction makeTx(Request request) {
-		int[] amountFrom = request.getAmountFrom();
-		int[] amountTo = request.getAmountTo();
-		String[] addrFromStr = request.getAddrFrom();
-		String[] addrToStr = request.getAddrTo();
-		String[] outHashStr = request.getOutHash();
-		String[] answerScriptStr = request.getAnswerScript();
-		String[] questionScriptStr = request.getQuestionScript();
-		byte[][] addrFrom = new byte[addrFromStr.length][];
-		byte[][] addrTo = new byte[addrToStr.length][];
-		for (int i = 0; i < addrFromStr.length; i++) {
-			addrFrom[i] = DatatypeConverter.parseHexBinary(addrFromStr[i]);
-		}
-		for (int i = 0; i < addrToStr.length; i++) {
-			addrTo[i] = DatatypeConverter.parseHexBinary(addrToStr[i]);
-		}
-		byte[][] outHash = new byte[outHashStr.length][];
-		for (int i = 0; i < outHashStr.length; i++) {
-			outHash[i] = DatatypeConverter.parseHexBinary(outHashStr[i]);
-		}
-		byte[][] answerScript = new byte[answerScriptStr.length][];
-		for (int i = 0; i < answerScriptStr.length; i++) {
-			answerScript[i] = DatatypeConverter.parseHexBinary(answerScriptStr[i]);
-		}
-		byte[][] questionScript = new byte[questionScriptStr.length][];
-		for (int i = 0; i < questionScriptStr.length; i++) {
-			questionScript[i] = DatatypeConverter.parseHexBinary(questionScriptStr[i]);
-		}
-		Input[] in = new Input[amountFrom.length];
-		Output[] out = new Output[amountTo.length];
-		for (int i = 0; i < in.length; i++) {
-			in[i] = new Input(outHash[i], addrFrom[i], new Answer(answerScript[i]));
-		}
-		for (int i = 0; i < out.length; i++) {
-			out[i] = new Output(amountTo[i], new Question(questionScript[i], addrTo[i]));
-		}
-		int version = request.getVersion();
-		int lockTime = request.getLockTime();
-		byte[] signature = DatatypeConverter.parseHexBinary(request.getSignature());
-		Transaction tx = new Transaction(in, out, version, lockTime, signature);
-		tx.removeNull();
-		return tx;
-	}
 
 	static String getBalance(Request request) {
 		String json = "";

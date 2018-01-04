@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -171,7 +172,7 @@ public class FrontendServer extends Thread{
 		try {
 			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
 			if (ByteUtil.contains(receptDataHashList, hash)) {
-				Log.log("already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
+				Log.log("[FrontendServer.receptNetworkObject()] Already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
 				return;
 			} else {
 				receptDataHashList.add(hash);
@@ -181,7 +182,7 @@ public class FrontendServer extends Thread{
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			Log.log("invalid NetworkObject", Constant.Log.EXCEPTION);
+			Log.log("[FrontendServer.receptNetworkObject()] Invalid NetworkObject: ", Constant.Log.EXCEPTION);
 			return;
 		}
 
@@ -195,19 +196,19 @@ public class FrontendServer extends Thread{
 		} else if (no.getType() == Constant.NetworkObject.TYPE_NODE
 				|| no.getType() == Constant.NetworkObject.TYPE_NODE_BROADCAST) {
 			if(remoteIp.equals(no.getNode().getIp())) {
-				backendTable.put(remoteIp, no.getNode());
-				Log.log(backendTable.toString());
+				frontendTable.put(remoteIp, no.getNode());
+				Log.log("[FrontendServer.receptNetworkObject()] Update frontendTable: "+frontendTable.toString());
 				return;
 			}
-		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK|| no.getType() == Constant.NetworkObject.TYPE_WORK_BROADCAST) {
 			MiningManager.receptWork(no, pw);
 			return;
 		} else if(no.getType() == Constant.NetworkObject.TYPE_UTXO) {
 			DataManager.addUTXO(no.getUTXO());
 			return;
 		}
-		Log.log("Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
-		Log.log(no.toString(), Constant.Log.EXCEPTION);
+		Log.log("[FrontendTable.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
+		Log.log("[FrontendTable.receptNetworkObject()] Invalid no: " + no.toString(), Constant.Log.EXCEPTION);
 	}
 
 	static void shareBackend(NetworkObject no) {
@@ -218,18 +219,18 @@ public class FrontendServer extends Thread{
 		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
 		broadcast(no, backendTable);
 	}
-	static void shareFrontend(Work work) {
+	static void shareFrontend(NetworkObject no) {
 		// nonce range share?
 		if (!Setting.BROADCAST_FRONTEND) {
 			Log.log("BROADCAST_FRONTEND false");
 			return;
 		}
-		NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_WORK, work);
 		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
 		broadcast(no, frontendTable);
 	}
 	private static void broadcast(NetworkObject no, Map<String, Node> remote) {
-		for (Node node : remote.values()) {
+		for (Iterator<Node> it = remote.values().iterator(); it.hasNext(); ) {
+			Node node = it.next();
 			Socket socket = new Socket();
 			Log.log("[FrontendServer.broadcast()] to: " + node.getIp()+":"+node.getPort());
 
@@ -275,6 +276,8 @@ public class FrontendServer extends Thread{
 				socket.close();
 			} catch (Exception e) {
 				e.printStackTrace();
+				Log.log("[FrontendServer.broadcast()] Cannot connection and detach: " + node.getIp()+":"+node.getPort(), Constant.Log.IMPORTANT);
+				it.remove();
 			}
 		}
 	}

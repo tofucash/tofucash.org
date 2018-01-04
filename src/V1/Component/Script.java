@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Library.Address;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
@@ -61,13 +62,8 @@ public class Script {
 			switch (state) {
 			case OP:
 				if (questionScript[i] == Constant.Script.OPCode.PUBK_DUP) {
-					byte[] publicKey = new byte[Constant.Address.BYTE_PUBLIC_KEY_PREFIX
-							+ Constant.Address.BYTE_PUBLIC_KEY];
-					System.arraycopy(DatatypeConverter.parseHexBinary(Constant.Address.PUBLIC_KEY_PREFIX), 0, publicKey,
-							0, Constant.Address.BYTE_PUBLIC_KEY_PREFIX);
 					buf = stack.pop();
-					System.arraycopy(buf, 0, publicKey, Constant.Address.BYTE_PUBLIC_KEY_PREFIX,
-							Constant.Address.BYTE_PUBLIC_KEY);
+					byte[] publicKey = Address.getPublicKeyFromByte(buf);
 					stack.push(publicKey);
 					stack.push(buf);
 				} else if (questionScript[i] == Constant.Script.OPCode.HASH_TWICE) {

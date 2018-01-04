@@ -64,15 +64,14 @@ public class Node implements Externalizable {
 		port = oi.readInt();
 		name = (String) oi.readObject();
 		int byteAddress = oi.readInt();
-		if (byteAddress != Constant.Node.BYTE_ADDRESS) {
+		if (byteAddress > Constant.Node.BYTE_ADDRESS) {
 			return;
 		}
 		address = new byte[byteAddress];
 		oi.read(address);
 
 		int bytePublicKey = oi.readInt();
-		if (bytePublicKey != Constant.Node.BYTE_PUBLIC_KEY_PREFIX + Constant.Node.BYTE_PUBLIC_KEY) {
-			System.out.println("?: " + bytePublicKey);
+		if (bytePublicKey > Constant.Node.BYTE_PUBLIC_KEY_PREFIX + Constant.Node.BYTE_PUBLIC_KEY) {
 			return;
 		}
 		publicKey = new byte[bytePublicKey];

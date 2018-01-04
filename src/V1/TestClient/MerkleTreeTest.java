@@ -6,10 +6,10 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
-import V1.Component.MerkleTree;
 import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.Log;
+import V1.Library.MerkleTree;
 
 public class MerkleTreeTest {
 	public static void main(String[] args) {

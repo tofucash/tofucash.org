@@ -15,7 +15,7 @@ public class BlockHeader implements Externalizable {
 	private int blockHeight;
 	private int txCnt;
 	private byte[] prevBlockHash;
-	private byte[] timestamp;
+	private long timestamp;
 	private byte[] miner;
 	private byte[] target;
 	private byte[] nonce;
@@ -25,15 +25,15 @@ public class BlockHeader implements Externalizable {
 		version = -1;
 		blockHeight = -1;
 		txCnt = 0;
-		prevBlockHash = null;
-		timestamp = null;
+		prevBlockHash = new byte[1];
+		timestamp = -1;
 		miner = null;
 		target = null;
 		nonce = null;
 		merkleRoot = null;
 	}
 
-	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, byte[] timestamp, byte[] miner, byte[] target) {
+	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, long timestamp, byte[] miner, byte[] target) {
 		this.version = version;
 		this.blockHeight = blockHeight;
 		this.txCnt = 0;
@@ -67,9 +67,18 @@ public class BlockHeader implements Externalizable {
 	byte[] getTarget() {
 		return target;
 	}
+	long getTimestamp() {
+		return timestamp;
+	}
+	
 	void nonceFound(byte[] nonce, byte[] miner) {
 		this.nonce = nonce;
 		this.miner = miner;
+	}
+	void updateParam(long timestamp, byte[] prevBlockHash, byte[] target) {
+		this.timestamp = timestamp;
+		this.prevBlockHash = prevBlockHash;
+		this.target = target;
 	}
 
 	@Override
@@ -88,8 +97,7 @@ public class BlockHeader implements Externalizable {
 		if(timestampLength > Constant.Time.BYTE_TIMESTAMP) {
 			return;
 		}
-		timestamp = new byte[timestampLength];
-		oi.read(timestamp);
+		timestamp = oi.readLong();
 
 		int minerLength = oi.readInt();
 		if(minerLength > Constant.NetworkObject.BYTE_MAX_MINER) {
@@ -127,8 +135,7 @@ public class BlockHeader implements Externalizable {
 		oo.writeInt(txCnt);
 		oo.writeInt(prevBlockHash.length);
 		oo.write(prevBlockHash);
-		oo.writeInt(timestamp.length);
-		oo.write(timestamp);
+		oo.writeLong(timestamp);
 		oo.writeInt(miner.length);
 		oo.write(miner);
 		oo.writeInt(target.length);
@@ -141,7 +148,7 @@ public class BlockHeader implements Externalizable {
 
 	public String toString() {
 		return "[version: " + version + ", blockHeight: "+blockHeight + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
-				+ ", timestamp: " + DatatypeConverter.printHexBinary(timestamp) + ", miner: "
+				+ ", timestamp: " + timestamp + ", miner: "
 				+ DatatypeConverter.printHexBinary(miner) + ", nonce: " + DatatypeConverter.printHexBinary(nonce)
 				+ ", MerkleTree: " + DatatypeConverter.printHexBinary(merkleRoot) + "]";
 	}

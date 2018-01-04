@@ -40,29 +40,9 @@ public class TestBackendClient {
 	static byte[] address = null;
 
 	public static void main(String[] args) {
-		init();
-		test1();
-//		 makeTrustedServerFile();
+//		init();
+//		test1();
 		// accessTest();
-	}
-
-	static void makeTrustedServerFile() {
-		String fileName, ip, nodeName, dirName;
-		Node node;
-		dirName = "backendServer";
-		ip = "212.24.106.144";
-		fileName = ip + ".conf";
-		nodeName = "euro";
-		node = new Node(ip, Constant.Server.SERVER_PORT, nodeName, Setting.getAddress(), Setting.getKeyPair());
-
-		try {
-			IO.fileWrite(System.getProperty("user.dir") + File.separator + "data" + File.separator + dirName
-					+ File.separator, fileName, ByteUtil.getByteObject(node));
-			Log.log(ByteUtil.convertByteToObject(
-					IO.readFileToByte(System.getProperty("user.dir") + "\\data\\" + dirName + "\\" + fileName)));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 
 	static void test1() {
@@ -125,7 +105,8 @@ public class TestBackendClient {
 			node = new Node("192.168.56.1", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
 
 			tx = getTestTransaction();
-			block = new Block(1, new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
+			block = new Block(1);
+			block.updateHeader(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
 			block.addTransaction(tx);
 
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.TX,
@@ -182,7 +163,7 @@ public class TestBackendClient {
 		byte[] script = new byte[1 + Constant.Address.BYTE_PUBLIC_KEY];
 		script[0] = OPCode.PUSH512;
 		System.arraycopy(Setting.getPublicKey(), 0, script, 1, Constant.Address.BYTE_PUBLIC_KEY);
-		in[0] = new Input(new byte[] { 0x01, 0x02, 0x03 }, new byte[] { 0x01, 0x02, 0x03 }, new Answer(script));
+		in[0] = new Input(new byte[] { 0x01, 0x02, 0x03 }, new Answer(script, new byte[] { 0x01, 0x02, 0x03 }), 1);
 		out[0] = new Output(1,  new Question(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 5, 6, 7, 8, 9, 10, 11, 12, 13,
 				14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 }, Setting.getAddress()));
 		version = 0xffff;

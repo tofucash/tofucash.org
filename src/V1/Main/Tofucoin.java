@@ -60,7 +60,7 @@ public class Tofucoin {
 		Log.init();
 		Setting.init();
 		Blockchain.init();
-		MiningManager.init();
+		DataManager.init();
 		try {
 			BackendServer.init();
 		} catch (Exception e) {

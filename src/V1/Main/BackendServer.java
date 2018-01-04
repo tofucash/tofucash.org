@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -28,8 +29,10 @@ import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.NetworkObject;
 import V1.Component.Node;
+import V1.Component.Request;
 import V1.Component.Transaction;
 import V1.Component.Work;
+import V1.Library.Address;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
@@ -37,6 +40,7 @@ import V1.Library.IO;
 import V1.Library.Log;
 import V1.Library.Mining;
 import V1.Library.TofuError;
+import net.arnx.jsonic.JSON;
 
 public class BackendServer extends Thread{
 	private static List<byte[]> receptDataHashList;
@@ -198,16 +202,22 @@ public class BackendServer extends Thread{
 				return;
 			}
 		} else if (no.getType() == Constant.NetworkObject.TYPE_REPORT) {
-			if(MiningManager.verifyMining(no.getReport())) {
+			if(DataManager.verifyMining(no.getReport())) {
 				Blockchain.nonceFound(no.getReport().getNonce(), no.getReport().getMiner());
 			}
 			return;
 		} else if(no.getType() == Constant.NetworkObject.TYPE_REQUEST) {
-			throw new TofuError.UnimplementedError("deprecated");
-//			Transaction tx;
-//			if((tx = Blockchain.verifyRequest(no.getRequest())) != null) {
-//				Blockchain.addTransaction(new NetworkObject(Constant.Blockchain.TX, tx));
-//			}
+			// verify request signature
+			String signature = no.getRequest().getSignature();
+			no.getRequest().setSignature(no.getRequest().getPublicKey());
+			String txStr = JSON.encode(no.getRequest());
+			no.getRequest().setSignature(signature);
+			if (Crypto.verify(Address.getPublicKeyFromByte(DatatypeConverter.parseHexBinary(no.getRequest().getPublicKey()))
+					, txStr.getBytes(), DatatypeConverter.parseHexBinary(signature))) {
+				Blockchain.addTransaction(new NetworkObject(Constant.Blockchain.TX, DataManager.makeTx(no.getRequest())));
+				return;
+			}
+			Log.log("[BackendServer.receptNetworkObject()] TX signature invalid", Constant.Log.INVALID);
 		}
 		Log.log("[BackendServer.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]: " + no, Constant.Log.EXCEPTION);
 	}
@@ -230,7 +240,8 @@ public class BackendServer extends Thread{
 		}
 	}
 	static void broadcast(NetworkObject no, Map<String, Node> remote) {
-		for (Node node : remote.values()) {
+		for (Iterator<Node> it = remote.values().iterator(); it.hasNext(); ) {
+			Node node = it.next();
 			Socket socket = new Socket();
 			Log.log("[BackendServer.broadcast()] to: " + node.getIp()+":"+node.getPort());
 
@@ -276,6 +287,8 @@ public class BackendServer extends Thread{
 				socket.close();
 			} catch (Exception e) {
 				e.printStackTrace();
+				Log.log("[BackendServer.broadcast()] Cannot connection and detach: " + node.getIp()+":"+node.getPort(), Constant.Log.IMPORTANT);
+				it.remove();
 			}
 		}
 	}

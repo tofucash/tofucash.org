@@ -26,6 +26,7 @@ public class Transaction implements Externalizable {
 	private Input[] in;
 	private Output[] out;
 	private byte[] signature; 
+	private byte[] publicKey;
 
 	public static void init() {
 		Log.log("Transaction init done.");
@@ -36,12 +37,13 @@ public class Transaction implements Externalizable {
 		out = new Output[Constant.Transaction.MAX_INPUT_OUTPUT];
 	}
 
-	public Transaction(Input[] in, Output[] out, int version, int lockTime, byte[] signature) {
+	public Transaction(Input[] in, Output[] out, int version, int lockTime, byte[] signature, byte[] publicKey) {
 		this.in = in;
 		this.out = out;
 		this.version = version;
 		this.lockTime = lockTime;
 		this.signature = signature;
+		this.publicKey = publicKey;
 	}
 	public Transaction(Input[] in, Output[] out, int version, int lockTime, KeyPair keyPair) throws Exception {
 		this.in = in;
@@ -49,6 +51,7 @@ public class Transaction implements Externalizable {
 		this.version = version;
 		this.lockTime = lockTime;
 		this.signature = keyPair.getPublic().getEncoded();
+		this.publicKey = keyPair.getPublic().getEncoded();
 		this.signature = Crypto.sign(keyPair.getPrivate(), keyPair.getPublic(), ByteUtil.getByteObject(this));
 	}
 
@@ -83,18 +86,15 @@ public class Transaction implements Externalizable {
 	public byte[] getSignature() {
 		return signature;
 	}
+	public byte[] getPublicKey() {
+		return publicKey;
+	}
 
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		int inCnt = 0, outCnt = 0;
 
 		version = oi.readInt();
 		lockTime = oi.readInt();
-		int sigLength = oi.readInt();
-		if(sigLength > Constant.Transaction.BYTE_MAX_SIGNATURE) {
-			return;
-		}
-		signature = new byte[sigLength];
-		oi.read(signature);
 		inCnt = oi.readInt();
 		if (inCnt > Constant.Transaction.MAX_INPUT_OUTPUT) {
 			return;
@@ -111,13 +111,23 @@ public class Transaction implements Externalizable {
 		for(int i = 0; i < outCnt; i++) {
 			out[i] = (Output) oi.readObject();			
 		}
+		int sigLength = oi.readInt();
+		if(sigLength > Constant.Transaction.BYTE_MAX_SIGNATURE) {
+			return;
+		}
+		signature = new byte[sigLength];
+		oi.read(signature);
+		int publicKeyLength = oi.readInt();
+		if(publicKeyLength > Constant.Address.BYTE_PUBLIC_KEY) {
+			return;
+		}
+		publicKey = new byte[publicKeyLength];
+		oi.read(publicKey);
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeInt(version);
 		oo.writeInt(lockTime);
-		oo.writeInt(signature.length);
-		oo.write(signature);
 		oo.writeInt(in.length);
 		for(int i = 0; i < in.length; i++) {
 			oo.writeObject(in[i]);
@@ -126,11 +136,14 @@ public class Transaction implements Externalizable {
 		for(int i = 0; i < out.length; i++) {
 			oo.writeObject(out[i]);
 		}
-		oo.writeObject(out);
+		oo.writeInt(signature.length);
+		oo.write(signature);
+		oo.writeInt(publicKey.length);
+		oo.write(publicKey);
 	}
 
 	public String toString() {
-		return "[version: " + version + ", lockTime: " + lockTime + ", signature: "+DatatypeConverter.printHexBinary(signature)+", Input[]: " + Arrays.asList(in) + ", Output[]: "
+		return "[version: " + version + ", lockTime: " + lockTime + ", signature: "+DatatypeConverter.printHexBinary(signature) + ", publicKey: "+DatatypeConverter.printHexBinary(publicKey)+", Input[]: " + Arrays.asList(in) + ", Output[]: "
 				+ Arrays.asList(out) + "]";
 	}
 

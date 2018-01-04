@@ -14,6 +14,8 @@ public class Report implements Externalizable {
 	private byte[] nonce;
 	private byte[] result;
 	private byte[] miner;
+	private byte[] target;
+	private byte[] signature;
 
 	public Report() {
 		hash = null;

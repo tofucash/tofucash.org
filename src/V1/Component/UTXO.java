@@ -20,20 +20,39 @@ public class UTXO implements Externalizable{
 	/**
 	 * Map(receiver, Map<utxoHash, Output>*/
 	private Map<ByteBuffer, Map<ByteBuffer, Output>> table;
+//	private Map<ByteBuffer, Map<ByteBuffer, Output>> tableInvalid;
 	public UTXO() {
 		table = new HashMap<ByteBuffer, Map<ByteBuffer, Output>>();
 	}
 	public void add(byte[] key, Output out) throws Exception {
+		add(key, out, table);
+	}
+//	public void addInvalid(byte[] key, Output out) throws Exception {
+//		add(key, out, tableInvalid);
+//	}
+	public void add(byte[] addr, Output out, Map<ByteBuffer, Map<ByteBuffer, Output>> addTable) throws Exception {
 		Map<ByteBuffer, Output> tmp;
-		ByteBuffer buf = ByteBuffer.wrap(key);
-		if(table.containsKey(buf)) {
-			tmp = table.get(buf);
+		ByteBuffer buf = ByteBuffer.wrap(addr);
+		if(addTable.containsKey(buf)) {
+			tmp = addTable.get(buf);
 		} else {
 			tmp = new HashMap<ByteBuffer, Output>();
-			table.put(ByteBuffer.wrap(key), tmp);
+			addTable.put(ByteBuffer.wrap(addr), tmp);
 		}
 		tmp.put(ByteBuffer.wrap(Crypto.hashTwice(ByteUtil.getByteObject(out))), out);
 	}
+	
+	public void remove(byte[] addr, byte[] outHash) {
+		ByteBuffer buf = ByteBuffer.wrap(addr);
+		if(table.containsKey(buf)) {
+			Map<ByteBuffer, Output> tmp = table.get(buf);
+			ByteBuffer buf2 = ByteBuffer.wrap(outHash);
+			if(tmp.containsKey(buf2)) {
+				tmp.remove(buf2);
+			}
+		}
+	}
+	
 	public Map<ByteBuffer, Output> get(ByteBuffer byteBuffer) {
 		if(table.containsKey(byteBuffer)) {
 			return table.get(byteBuffer);

@@ -13,29 +13,32 @@ import V1.Library.Constant.Transaction;
 public class Input implements Externalizable {
 	private static final long serialVersionUID = 199603312040000L;
 	private byte[] outHash;
-	private byte[] receiver;
+	private int amount;
 	private Answer answer;
 
 	public Input() {
 		outHash = null;
-		receiver = null;
 		answer = null;
+		amount = -1;
 	}
 
-	public Input(byte[] outTxHash, byte[] receiver, Answer answer) {
-		this.outHash = outTxHash;
-		this.receiver = receiver;
+	public Input(byte[] outHash, Answer answer, int amount) {
+		this.outHash = outHash;
 		this.answer = answer;
+		this.amount = amount;
 	}
 
 	public byte[] getOutHash() {
 		return outHash;
 	}
 	public byte[] getReceiver() {
-		return receiver;
+		return answer.getReceiver();
 	}
 	public Answer getAnswer() {
 		return answer;
+	}
+	public int getAmount() {
+		return amount;
 	}
 
 	@Override
@@ -46,25 +49,19 @@ public class Input implements Externalizable {
 		}
 		outHash = new byte[outHashLength];
 		oi.read(outHash);
-		int receiverLength = oi.readInt();
-		if(receiverLength > Constant.Address.BYTE_ADDRESS) {
-			return;
-		}
-		receiver = new byte[receiverLength];
-		oi.read(receiver);
 		answer = (Answer) oi.readObject();
+		amount = oi.readInt();
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeInt(outHash.length);
 		oo.write(outHash);
-		oo.writeInt(receiver.length);
-		oo.write(receiver);
 		oo.writeObject(answer);
+		oo.writeInt(amount);
 	}
 
 	public String toString() {
-		return "[outTxHash: " + DatatypeConverter.printHexBinary(outHash) + ", answer: " + answer.toString() + "]";
+		return "[outTxHash: " + DatatypeConverter.printHexBinary(outHash) + ", answer: " + answer.toString() + ", amount: " + amount+ "]";
 	}
 }

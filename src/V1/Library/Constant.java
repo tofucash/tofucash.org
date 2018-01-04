@@ -38,23 +38,28 @@ public class Constant {
 		public static final int BYTE_NONCE = 64;
 		public static final String DEFAULT_TARGET = "0fffff0000000000000000000000000000000000000000000000000000000000";
 		public static final String DEFAULT_PREV_BLOCK_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+		public static final int BYTE_TARGET = 32; 
 	}
 	public static class Blockchain {
 		private Blockchain() {
 		}
 		
 		public static final int SAVE_FILE_PER_DIR = 1000;
-		public static final int MAX_PREV_BLOCK_HASH_LIST = 6;
 		public static final int BYTE_BLOCK_HASH = Block.BYTE_BLOCK_HASH;
 		public static final int TX_FEE = 1;
 
 		public static final int BLOCK = NetworkObject.TYPE_BLOCK;
 		public static final int TX = NetworkObject.TYPE_TX;
 		public static final int NODE = NetworkObject.TYPE_NODE;
-		public static final int BLOCK_BROADCAST = NetworkObject.TYPE_BLOCK_BROADCAST;
-		public static final int TX_BROADCAST = NetworkObject.TYPE_TX_BROADCAST;
-		public static final int NODE_BROADCAST = NetworkObject.TYPE_NODE_BROADCAST;
-		public static final int ADJUST_TARGET = 2016;
+		public static final int BLOCK_BROADCAST_DATA = NetworkObject.TYPE_BLOCK_BROADCAST;
+		public static final int TX_BROADCAST_DATA = NetworkObject.TYPE_TX_BROADCAST;
+		public static final int NODE_BROADCAST_DATA = NetworkObject.TYPE_NODE_BROADCAST;
+		
+		public static final int CONFIRMATION = 3;
+		public static final int DIFFICULTY_ADJUST_BLOCK = 10;
+		public static final int LENGTH_MAX_BLOCK_TIME_LIST = DIFFICULTY_ADJUST_BLOCK - CONFIRMATION - 1;
+		public static final int AVERAGE_BLOCK_TIME = 30;
+		public static final int TARGET_SHIFT_PER_TIME = 2;	// shift per 2s per block 
 
 	}
 
@@ -96,12 +101,15 @@ public class Constant {
 		public static final int TYPE_NODE_BROADCAST = 310;
 
 		public static final int TYPE_WORK = 600;
+		public static final int TYPE_WORK_BROADCAST = 610;
 
 		public static final int TYPE_REPORT = 700;
 
 		public static final int TYPE_REQUEST = 800;
 		
 		public static final int TYPE_UTXO = 900;
+		
+		public static final int TYPE_SPENT = 1000;
 
 		
 		public static final int BYTE_MAX_HASH = 64;
@@ -116,7 +124,7 @@ public class Constant {
 		public static final int BYTE_ADDRESS = Address.BYTE_ADDRESS;
 		public static final int BYTE_PUBLIC_KEY = Address.BYTE_PUBLIC_KEY;
 		public static final int BYTE_MAX_SIGNATURE = Transaction.BYTE_MAX_SIGNATURE;
-		public static final int BYTE_PUBLIC_KEY_PREFIX = 24;
+		public static final int BYTE_PUBLIC_KEY_PREFIX = Address.BYTE_PUBLIC_KEY_PREFIX;
 	}
 	public static class Report {
 		private Report() {
@@ -128,6 +136,7 @@ public class Constant {
 	public static class Request {
 		private Request() {
 		}
+		public static final int VERSION = 1;
 		public static final int TYPE_SEND_TOFU = 1000;
 		public static final int TYPE_CHECK_BALANCE = 2000;
 	}

@@ -19,8 +19,17 @@ import javax.xml.bind.DatatypeConverter;
 
 public class Address {
 
-	public static byte[] getAddress(PublicKey publicKey) {		
-		return Crypto.hashTwice(DatatypeConverter.parseHexBinary(DatatypeConverter.printHexBinary(publicKey.getEncoded()).substring(Constant.Address.BYTE_PUBLIC_KEY_PREFIX*2)));
+	public static byte[] getAddress(PublicKey publicKey) {
+		return Crypto.hashTwice(DatatypeConverter.parseHexBinary(DatatypeConverter
+				.printHexBinary(publicKey.getEncoded()).substring(Constant.Address.BYTE_PUBLIC_KEY_PREFIX * 2)));
+	}
+
+	public static byte[] getPublicKeyFromByte(byte[] buf) {
+		byte[] publicKey = new byte[Constant.Address.BYTE_PUBLIC_KEY_PREFIX + Constant.Address.BYTE_PUBLIC_KEY];
+		System.arraycopy(DatatypeConverter.parseHexBinary(Constant.Address.PUBLIC_KEY_PREFIX), 0, publicKey, 0,
+				Constant.Address.BYTE_PUBLIC_KEY_PREFIX);
+		System.arraycopy(buf, 0, publicKey, Constant.Address.BYTE_PUBLIC_KEY_PREFIX, Constant.Address.BYTE_PUBLIC_KEY);
+		return publicKey;
 	}
 
 	public static byte[] createPrivateKey() {
@@ -36,41 +45,41 @@ public class Address {
 		}
 	}
 
-//	public static KeyPair test() {
-//		KeyPair apair = null;
-//		try {
-//			KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-//			ECGenParameterSpec gps = new ECGenParameterSpec("secp256k1"); // NIST
-//																			// P-256
-//			kpg.initialize(gps);
-//			apair = kpg.generateKeyPair();
-//			ECPublicKey apub = (ECPublicKey) apair.getPublic();
-//			ECParameterSpec aspec = apub.getParams();
-//			// could serialize aspec for later use (in compatible JRE)
-//			//
-//			// for test only reuse bogus pubkey, for real substitute values
-//			ECPoint apoint = apub.getW();
-//			BigInteger x = apoint.getAffineX(), y = apoint.getAffineY();
-//			// construct point plus params to pubkey
-//			ECPoint bpoint = new ECPoint(x, y);
-//			ECPublicKeySpec bpubs = new ECPublicKeySpec(bpoint, aspec);
-//			KeyFactory kfa = KeyFactory.getInstance("EC");
-//			ECPublicKey bpub = (ECPublicKey) kfa.generatePublic(bpubs);
-//			//
-//			// for test sign with original key, verify with reconstructed key
-//			Signature sig = Signature.getInstance("SHA256withECDSA");
-//			byte[] data = "test".getBytes();
-//			sig.initSign(apair.getPrivate());
-//			sig.update(data);
-//			byte[] dsig = sig.sign();
-//			sig.initVerify(bpub);
-//			sig.update(data);
-//			System.out.println(sig.verify(dsig));
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//		return apair;
-//	}
+	// public static KeyPair test() {
+	// KeyPair apair = null;
+	// try {
+	// KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+	// ECGenParameterSpec gps = new ECGenParameterSpec("secp256k1"); // NIST
+	// // P-256
+	// kpg.initialize(gps);
+	// apair = kpg.generateKeyPair();
+	// ECPublicKey apub = (ECPublicKey) apair.getPublic();
+	// ECParameterSpec aspec = apub.getParams();
+	// // could serialize aspec for later use (in compatible JRE)
+	// //
+	// // for test only reuse bogus pubkey, for real substitute values
+	// ECPoint apoint = apub.getW();
+	// BigInteger x = apoint.getAffineX(), y = apoint.getAffineY();
+	// // construct point plus params to pubkey
+	// ECPoint bpoint = new ECPoint(x, y);
+	// ECPublicKeySpec bpubs = new ECPublicKeySpec(bpoint, aspec);
+	// KeyFactory kfa = KeyFactory.getInstance("EC");
+	// ECPublicKey bpub = (ECPublicKey) kfa.generatePublic(bpubs);
+	// //
+	// // for test sign with original key, verify with reconstructed key
+	// Signature sig = Signature.getInstance("SHA256withECDSA");
+	// byte[] data = "test".getBytes();
+	// sig.initSign(apair.getPrivate());
+	// sig.update(data);
+	// byte[] dsig = sig.sign();
+	// sig.initVerify(bpub);
+	// sig.update(data);
+	// System.out.println(sig.verify(dsig));
+	// } catch (Exception e) {
+	// e.printStackTrace();
+	// }
+	// return apair;
+	// }
 
 	public static KeyPair createKeyPair() {
 		KeyPairGenerator keyGen = null;

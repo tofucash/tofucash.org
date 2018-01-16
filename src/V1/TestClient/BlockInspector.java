@@ -9,11 +9,11 @@ import V1.Library.Log;
 
 public class BlockInspector {
 	public static void main(String[] args) {
-		int blockHeight = 1;
+		int blockHeight = Integer.parseInt(args[0]);
 		String blockFilePath = Setting.BLOCKCHAIN_BIN_DIR + +(blockHeight / Constant.Blockchain.SAVE_FILE_PER_DIR)
 				+ File.separator+blockHeight;
 		try {
-			Log.log(ByteUtil.convertByteToObject(IO.readFileToByte(blockFilePath)));
+			Log.log("Block["+blockHeight+"]: "+ByteUtil.convertByteToObject(IO.readFileToByte(blockFilePath)));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

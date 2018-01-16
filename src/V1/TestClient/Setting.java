@@ -12,8 +12,10 @@ import java.security.spec.X509EncodedKeySpec;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Library.Address;
 import V1.Library.Base58;
 import V1.Library.Constant;
+import V1.Library.Crypto;
 import V1.Library.Log;
 import V1.Library.TofuError.SettingError;
 import V1.Library.TofuException.AddressFormatException;
@@ -23,7 +25,7 @@ public class Setting {
 	static final String TRUSTED_FRONTEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"frontendServer"+File.separator;
 	static final String TRUSTED_BACKEND_DIR = System.getProperty("user.dir") +File.separator+".." + File.separator + "data"+File.separator+"backendServer"+File.separator;
 
-	private static final String address = "8C4uHzpdVq5ZmCZxBWdbNt3L91pfEqxwS8AHsVwEMEnE552oyTz8YpwSvdZFuWQ2mTjLCjcH15Zjd9yttDMtNxBvE2ToZFcmrejx2TwbRrgyexJEtUX43E6T5dGh2xSk9vD4fG8f2RGMEARxiAq823ZmsKu8j8trDVFYpJmZfwx2ijS";
+	private static final String address = "66UHD9Ac8AWc4yUddFhMRkPtHcWU2Q4dp1s1PZVrm2QWkaUPK8GFWY5u7rt9FR3t8tHP2dwgbqgwgXXG9ym8Y13E";
 	private static final String privateKey = "63CF6591947F69D40E7E3ABCE6FCE7466B0339A6B03C248346A07C489938A906";
 	private static final String publicKey = "0413433316B2BD3B861B509DAB0C99F6867391E72ADB29693ED6168ECC2873F21E15944C8FC970F0E9582382CA0DC991460C01E4297CC921382A5FF21D4E933413";
 
@@ -46,6 +48,11 @@ public class Setting {
 		PrivateKey prvk = kf.generatePrivate(new PKCS8EncodedKeySpec(DatatypeConverter.parseHexBinary(Constant.Address.PRIVATE_KEY_PREFIX + privateKey)));
 		PublicKey pubk = kf.generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(Constant.Address.PUBLIC_KEY_PREFIX + publicKey)));
 		keyPair = new KeyPair(pubk, prvk);
+	}
+	static void testSetKey() {
+		keyPair = Address.createKeyPair();
+		bytePublicKey = keyPair.getPublic().getEncoded();
+		byteAddress = Address.getAddress(keyPair.getPublic());
 	}
 	static byte[] getAddress() {
 		return byteAddress;

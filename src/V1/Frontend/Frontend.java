@@ -9,6 +9,8 @@ public class Frontend {
 		server.start();
 		HashServer hashServer = new HashServer();
 		hashServer.start();
+		DataManager dataManager = new DataManager();
+		dataManager.start();
 	}
 	static void init() {
 		Setting.init();

@@ -71,7 +71,7 @@ public class TestFrontendClient {
 		Socket socket = new Socket();
 
 		try {
-			InetSocketAddress socketAddress = new InetSocketAddress("0.0.0.0", Constant.Server.HASH_SERVER_PORT);
+			InetSocketAddress socketAddress = new InetSocketAddress("133.18.56.150", Constant.Server.SERVER_PORT);
 			socket.connect(socketAddress, 30000);
 			Log.log("buffersize: " + socket.getSendBufferSize(), Constant.Log.TEMPORARY);
 
@@ -88,9 +88,9 @@ public class TestFrontendClient {
 
 			tx = getTestTransaction();
 			block = new Block(1);
-			block.updateHeader(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
+			block.updateHeader(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
 			block.addTransaction(tx);
-			work = new Work(new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02});
+			work = new Work(new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02}, new byte[] {0x01, 0x4a, 0x02});
 
 			NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_WORK, work);
 			

@@ -58,10 +58,10 @@ public class Tofucoin {
 	}
 	private static void init() {
 		Log.init();
-		Setting.init();
 		Blockchain.init();
 		DataManager.init();
 		try {
+			Setting.init();
 			BackendServer.init();
 		} catch (Exception e) {
 			e.printStackTrace();

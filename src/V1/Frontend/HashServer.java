@@ -36,6 +36,7 @@ import V1.Component.UTXO;
 import V1.Component.Work;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
+import V1.Library.Constant.Verify.Result;
 import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
@@ -104,11 +105,14 @@ public class HashServer extends Thread {
 			ByteBuffer bbuf = ByteBuffer.allocate(Constant.Server.SERVER_BUF);
 			Work work = MiningManager.getWork();
 			String json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget()) + "\", \"hash\": \""
-					+ DatatypeConverter.printHexBinary(work.getHash()) + "\", \"start\": \""
-					+ DatatypeConverter.printHexBinary(calcNonceStart(work.getHash(), remoteIp)) + "\", \"cnt\": \""
+					+ DatatypeConverter.printHexBinary(work.getHash()) + "\", \"subTarget\": \""
+									+ DatatypeConverter.printHexBinary(work.getSubTarget()) + "\", \"fAddress\": \""
+											+ DatatypeConverter.printHexBinary(work.getFAddress()) + "\", \"start\": \""
+					+ DatatypeConverter.printHexBinary(MiningManager.getNextNonce(remoteIp)) + "\", \"cnt\": \""
 					+ Constant.Server.NONCE_CNT + "\", \"algo\": \"" + Constant.Server.HASH_ALGO + "\"}";
 			int readBytes = 0;
 			String receptBody = "";
+			Result result = null;
 			Report report = null;
 			Request request = null;
 
@@ -149,14 +153,19 @@ public class HashServer extends Thread {
 				byte[] recept = new byte[readBytes];
 				System.arraycopy(bbuf.array(), 0, recept, 0, readBytes);
 				receptBody = new String(recept).replaceAll(".*\r\n", "");
+				Log.log("[HashServer.Client.run()] receptBody: " + receptBody);
 				if (!receptBody.equals("")) {
-					if ((report = MiningManager.verifyMining(receptBody)) != null) {
+					if ((report = MiningManager.verifyMining(receptBody, remoteIp)) != null) {
 						Log.log("[HashServer.Client.run()] report: " + report, Constant.Log.IMPORTANT);
-					} else if ((request = RequestManager.verifyRequest(receptBody)) != null) {
+					} else if ((request = DataManager.verifyRequest(receptBody)) != null) {
 						Log.log("[HashServer.Client.run()] request: " + request, Constant.Log.TEMPORARY);
 						if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
 						} else if (request.getType() == Constant.Request.TYPE_CHECK_BALANCE) {
 							json = DataManager.getBalance(request);
+						} else if(request.getType() == Constant.Request.TYPE_CHECK_TX) {
+							json = DataManager.getTransactionInfo(request);
+						} else if(request.getType() - Constant.Request.TYPE_ROUTINE < 1000  ) {
+							json = DataManager.getRoutineInfo(request);
 						} else {
 							throw new TofuError.UnimplementedError("[HashServer.Client.run()]  Unknown Request Type");
 						}
@@ -189,15 +198,22 @@ public class HashServer extends Thread {
 					Log.log("[HashServer.Client.run()]: ", Constant.Log.EXCEPTION);
 				}
 			}
-			if(report != null) {
+			if (report != null) {			// マイニング関連のとき
 				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REPORT, report));
-			} else if(request != null) {
+			} else if (request != null) {			// リクエストのとき
 				if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
-					Spent spent = new Spent(request.getAddrFrom(), request.getAddrFrom());
-					FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_SPENT, spent));
-					FrontendServer.shareBackend(
-							new NetworkObject(Constant.NetworkObject.TYPE_REQUEST, request));	
-				}			
+					if(DataManager.balanceEnough(request)) {
+						DataManager.addRequestPool(request);
+					}
+				} else if(request.getType() == Constant.Request.TYPE_CHECK_TX) {
+				} else if(request.getType() == Constant.Request.TYPE_CHECK_BALANCE) {
+				} else if(request.getType() - Constant.Request.TYPE_ROUTINE < 1000  ) {
+					if(DataManager.balanceEnough(request)) {
+						DataManager.registerRoutine(request);
+					}
+				} else {
+					throw new TofuError.UnimplementedError("Unknown Request Type");
+				}
 			}
 		}
 	}

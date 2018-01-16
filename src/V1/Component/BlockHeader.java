@@ -8,6 +8,7 @@ import java.io.ObjectOutput;
 import javax.xml.bind.DatatypeConverter;
 
 import V1.Library.Constant;
+import V1.Library.Log;
 
 public class BlockHeader implements Externalizable {
 	private static final long serialVersionUID = 199603312020000L;
@@ -18,8 +19,10 @@ public class BlockHeader implements Externalizable {
 	private long timestamp;
 	private byte[] miner;
 	private byte[] target;
+	private byte[] subTarget;
 	private byte[] nonce;
 	private byte[] merkleRoot;
+	private byte[] blockHash;
 
 	public BlockHeader() {
 		version = -1;
@@ -29,11 +32,13 @@ public class BlockHeader implements Externalizable {
 		timestamp = -1;
 		miner = null;
 		target = null;
+		subTarget = null;
 		nonce = null;
 		merkleRoot = null;
+		blockHash = null;
 	}
 
-	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, long timestamp, byte[] miner, byte[] target) {
+	public BlockHeader(int version, int blockHeight, byte[] prevBlockHash, long timestamp, byte[] miner, byte[] target, byte[] subTarget) {
 		this.version = version;
 		this.blockHeight = blockHeight;
 		this.txCnt = 0;
@@ -41,8 +46,10 @@ public class BlockHeader implements Externalizable {
 		this.timestamp = timestamp;
 		this.miner = miner;
 		this.target = target;
+		this.subTarget = subTarget;
 		this.nonce = new byte[Constant.Block.BYTE_NONCE];
 		this.merkleRoot = new byte[Constant.MerkleTree.BYTE_MERKLE_ROOT];
+		this.blockHash = new byte[Constant.Block.BYTE_BLOCK_HASH];
 	}
 
 	byte[] getPrevBlockHash() {
@@ -67,18 +74,26 @@ public class BlockHeader implements Externalizable {
 	byte[] getTarget() {
 		return target;
 	}
+	byte[] getSubTarget() {
+		return subTarget;
+	}
 	long getTimestamp() {
 		return timestamp;
 	}
 	
-	void nonceFound(byte[] nonce, byte[] miner) {
+	void nonceFound(byte[] nonce, byte[] miner, byte[] blockHash) {
 		this.nonce = nonce;
 		this.miner = miner;
+		this.blockHash = blockHash;
 	}
-	void updateParam(long timestamp, byte[] prevBlockHash, byte[] target) {
+	void updateParam(long timestamp, byte[] prevBlockHash, byte[] target, byte[] subTarget) {
 		this.timestamp = timestamp;
 		this.prevBlockHash = prevBlockHash;
 		this.target = target;
+		this.subTarget = subTarget;
+	}
+	byte[] getBlockHash() {
+		return blockHash;
 	}
 
 	@Override
@@ -92,11 +107,6 @@ public class BlockHeader implements Externalizable {
 		}
 		prevBlockHash = new byte[prevBlockHashLength];
 		oi.read(prevBlockHash);
-		
-		int timestampLength = oi.readInt();
-		if(timestampLength > Constant.Time.BYTE_TIMESTAMP) {
-			return;
-		}
 		timestamp = oi.readLong();
 
 		int minerLength = oi.readInt();
@@ -112,7 +122,14 @@ public class BlockHeader implements Externalizable {
 		}
 		target = new byte[targetLength];		
 		oi.read(target);
-		
+
+		int subTargetLength = oi.readInt();
+		if(subTargetLength > Constant.Block.BYTE_BLOCK_HASH) {
+			return;
+		}
+		subTarget = new byte[subTargetLength];		
+		oi.read(subTarget);
+
 		int nonceLength = oi.readInt();
 		if(nonceLength > Constant.Block.BYTE_NONCE) {
 			return;
@@ -126,6 +143,13 @@ public class BlockHeader implements Externalizable {
 		}
 		merkleRoot = new byte[merkleRootLength];		
 		oi.read(merkleRoot);
+
+		int blockHashLength = oi.readInt();
+		if(blockHashLength > Constant.Block.BYTE_BLOCK_HASH) {
+			return;
+		}
+		blockHash = new byte[blockHashLength];		
+		oi.read(blockHash);	
 	}
 
 	@Override
@@ -140,14 +164,19 @@ public class BlockHeader implements Externalizable {
 		oo.write(miner);
 		oo.writeInt(target.length);
 		oo.write(target);
+		oo.writeInt(subTarget.length);
+		oo.write(subTarget);
 		oo.writeInt(nonce.length);
 		oo.write(nonce);
 		oo.writeInt(merkleRoot.length);
 		oo.write(merkleRoot);
+		oo.writeInt(blockHash.length);
+		oo.write(blockHash);
 	}
 
 	public String toString() {
 		return "[version: " + version + ", blockHeight: "+blockHeight + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
+		 + ", target: " + DatatypeConverter.printHexBinary(target) + ", subTarget: " + DatatypeConverter.printHexBinary(subTarget)
 				+ ", timestamp: " + timestamp + ", miner: "
 				+ DatatypeConverter.printHexBinary(miner) + ", nonce: " + DatatypeConverter.printHexBinary(nonce)
 				+ ", MerkleTree: " + DatatypeConverter.printHexBinary(merkleRoot) + "]";

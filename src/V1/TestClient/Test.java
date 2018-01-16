@@ -1,25 +1,67 @@
 package V1.TestClient;
 
+import java.io.File;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Component.Block;
+import V1.Component.BlockHeader;
+import V1.Component.Node;
 import V1.Component.Output;
 import V1.Component.Question;
 import V1.Component.Request;
+import V1.Component.Spent;
 import V1.Component.UTXO;
 import V1.Library.Base58;
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
+import V1.Library.IO;
 import V1.Library.Log;
 import V1.Library.TofuException.AddressFormatException;
 import net.arnx.jsonic.web.WebServiceServlet.JSON;
 
 public class Test {
 	public static void main(String[] args) {
+
+	}
+	public static void addressCheck() {
+		byte[] receiver1;
+		try {
+			receiver1 = Base58.decode("66UHD9Ac8AWc4yUddFhMRkPtHcWU2Q4dp1s1PZVrm2QWkaUPK8GFWY5u7rt9FR3t8tHP2dwgbqgwgXXG9ym8Y13E");
+			Log.log("receiver1: " + DatatypeConverter.printHexBinary(receiver1));
+			byte[] addrHex = Crypto.hashTwice(DatatypeConverter.parseHexBinary(
+					"0413433316B2BD3B861B509DAB0C99F6867391E72ADB29693ED6168ECC2873F21E15944C8FC970F0E9582382CA0DC991460C01E4297CC921382A5FF21D4E933413"));
+			Log.log("addrHex: " + DatatypeConverter.printHexBinary(addrHex));
+			Log.log("Base58.encode: " + Base58.encode(addrHex));
+		} catch (AddressFormatException e) {
+			e.printStackTrace();
+		}
+	}
+	public static void adjustTargetTest2() {
+		byte[] defaultTarget = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
+		int shift = 1;
+		Log.log("[Blockchain.targetAdjust()] shift: " + shift, Constant.Log.TEMPORARY);
+		BigInteger targetNum = new BigInteger(defaultTarget);			
+		byte[] targetTmp;
+		if (shift > 0) {
+			targetTmp = targetNum.shiftRight(shift).toByteArray();
+		} else {
+			targetTmp = targetNum.shiftLeft(shift).toByteArray();
+		}
+		byte[] newTarget = new byte[Constant.Block.BYTE_TARGET];
+		System.arraycopy(targetTmp, 0, newTarget, Constant.Block.BYTE_TARGET-targetTmp.length, targetTmp.length);
+		Log.log("d  Target: " + DatatypeConverter.printHexBinary(defaultTarget));
+		Log.log("newTarget: " + DatatypeConverter.printHexBinary(newTarget));
+	}
+	public static void adjustTargetTest() {
 		List<Long> blockTimeList = new ArrayList<Long>();
 		byte[] newTarget = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
 		;
@@ -56,7 +98,6 @@ public class Test {
 		}
 		Log.log("newTarget: " + DatatypeConverter.printHexBinary(newTarget));
 	}
-
 	public static void old() {
 		Log.log("0x17: " + DatatypeConverter.printHexBinary(new byte[] { 0x17 }));
 		try {

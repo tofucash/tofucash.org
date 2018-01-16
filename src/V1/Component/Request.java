@@ -134,8 +134,12 @@ public class Request implements Externalizable {
 	}
 
 	public String toString() {
-		if(type == Constant.Request.TYPE_SEND_TOFU) {
-			return "[type: " + type + ", amount: " + Arrays.toString(amountFrom) + ", amountTo: " + Arrays.toString(amountTo)
+		if(type == Constant.Request.TYPE_CHECK_BALANCE) {
+			return "[type: "+ type+ ", addrFrom: "+ Arrays.toString(addrFrom)+"]";
+		} else if(type == Constant.Request.TYPE_CHECK_TX) {
+			return "[type: "+ type+ ", outHash "+ Arrays.toString(outHash)+"]";
+		} else if(type == Constant.Request.TYPE_SEND_TOFU || type - Constant.Request.TYPE_ROUTINE < 100) {
+			return "[type: " + type + ", version: "+version+", lockTime: "+lockTime + ", amount: " + Arrays.toString(amountFrom) + ", amountTo: " + Arrays.toString(amountTo)
 			+ ", addrFrom: " + Arrays.toString(addrFrom) + ", addrTo: "
 			+ Arrays.toString(addrTo) + ", outHash: "
 			+ Arrays.toString(outHash) + ", answerScript: "
@@ -143,8 +147,6 @@ public class Request implements Externalizable {
 			+ Arrays.toString(questionScript) + ", signature: "
 					+ signature + ", publicKey: "
 							+ publicKey + "]";
-		} else if(type == Constant.Request.TYPE_CHECK_BALANCE) {
-			return "[type: "+ type+ ", addrFrom: "+ Arrays.toString(addrFrom)+"]";
 		} else {
 			throw new TofuError.UnimplementedError("Unknown Request Type");
 		}

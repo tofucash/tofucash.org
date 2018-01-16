@@ -28,10 +28,6 @@ public class Transaction implements Externalizable {
 	private byte[] signature; 
 	private byte[] publicKey;
 
-	public static void init() {
-		Log.log("Transaction init done.");
-	}
-
 	public Transaction() {
 		in = new Input[Constant.Transaction.MAX_INPUT_OUTPUT];
 		out = new Output[Constant.Transaction.MAX_INPUT_OUTPUT];

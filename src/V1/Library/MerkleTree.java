@@ -1,13 +1,9 @@
-package V1.Component;
+package V1.Library;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
-
-import V1.Library.Constant;
-import V1.Library.Crypto;
-import V1.Library.Log;
 
 public class MerkleTree {
 	synchronized static public boolean updateMerkleTree(List<byte[]> merkleTree, final List<byte[]> txHashList) {

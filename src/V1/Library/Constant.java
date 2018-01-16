@@ -1,5 +1,6 @@
 package V1.Library;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
 public class Constant {
@@ -18,7 +19,7 @@ public class Constant {
 		private Address() {
 		}
 
-		public static final int BYTE_ADDRESS = 128;
+		public static final int BYTE_ADDRESS = 64;
 		public static final int BYTE_PRIVATE_KEY = 64;
 		public static final int BYTE_PUBLIC_KEY = 65;
 		public static final int BYTE_PRIVATE_KEY_PREFIX = 32;
@@ -36,9 +37,18 @@ public class Constant {
 		public static final int MAX_TX = (int) Math.pow(2, MAX_TX_POWER);
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
-		public static final String DEFAULT_TARGET = "0fffff0000000000000000000000000000000000000000000000000000000000";
-		public static final String DEFAULT_PREV_BLOCK_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
-		public static final int BYTE_TARGET = 32; 
+		public static final String DEFAULT_TARGET = "03ffffc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+		public static final String DEFAULT_SUB_TARGET = "0fffff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+		public static final int SUB_TARGET_SHIFT = 2;
+		public static final String DEFAULT_PREV_BLOCK_HASH = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+		public static final int BYTE_TARGET = BYTE_BLOCK_HASH; 
+		public static final int MAX_DIFFICULTY = 60*8;	// 512bit shift is actually max 
+		public static final int BLOCK_REWARD = 100 * 1000;
+		public static final int BLOCK_REWARD_HALVING = 100;
+		public static final int BLOCK_REWARD_HALVING_SIZE = 1000;
+		public static final int BLOCK_SUB_REWARD_RATE = 100;
+		public static final int BLOCK_FRONTEND_REWARD_RATE = 10000;
+		
 	}
 	public static class Blockchain {
 		private Blockchain() {
@@ -61,6 +71,9 @@ public class Constant {
 		public static final int AVERAGE_BLOCK_TIME = 30;
 		public static final int TARGET_SHIFT_PER_TIME = 2;	// shift per 2s per block 
 
+		public static final int NODE_PBFT_RATE = 3; 
+		
+		public static final String BLOCKCHAIN_TMP_DIR = "tmp"+File.separator;
 	}
 
 	public static class BlockHeader {
@@ -81,11 +94,18 @@ public class Constant {
 		}
 		public static final int BYTE_BUF = 1024;
 	}
+	public static class Manager {
+		public static final int REQUEST_NOTIFIER_INTERVAL = 3000;
+	}
 	public static class MerkleTree {
 		private MerkleTree() {
 		}
 		public static final int BYTE_MERKLE_ROOT = 64;
 
+	}
+	public static class Mining {
+		public static final int NONCE_CHECK_NODE= 3;
+		public static final int MAX_CLIENT_NODE= 1000;
 	}
 
 	public static class NetworkObject {
@@ -106,11 +126,16 @@ public class Constant {
 		public static final int TYPE_REPORT = 700;
 
 		public static final int TYPE_REQUEST = 800;
+		public static final int TYPE_REQUEST_BROADCAST = 810;
 		
 		public static final int TYPE_UTXO = 900;
 		
 		public static final int TYPE_SPENT = 1000;
 
+		public static final int TYPE_BLOCK_HASH = 1100;
+		
+		public static final int TYPE_ROUTINE = 1200;
+		public static final int TYPE_ROUTINE_REVOKE = 1200;
 		
 		public static final int BYTE_MAX_HASH = 64;
 		public static final int BYTE_MAX_NONCE = 64;
@@ -137,8 +162,18 @@ public class Constant {
 		private Request() {
 		}
 		public static final int VERSION = 1;
-		public static final int TYPE_SEND_TOFU = 1000;
-		public static final int TYPE_CHECK_BALANCE = 2000;
+		public static final int TYPE_SEND_TOFU = 10000;
+		public static final int TYPE_CHECK_BALANCE = 10100;
+		public static final int TYPE_CHECK_TX = 10200;
+		public static final int TYPE_ROUTINE = 10300;
+		public static final int TYPE_ROUTINE_REGISTER = 10310;
+		public static final int TYPE_ROUTINE_REVOKE = 10320;
+		
+		public static final int MESSAGE_NOTFOUND = 1;
+		public static final int MESSAGE_REGISTERED = 2;
+		public static final int MESSAGE_REVOKED = 3;
+		public static final int MESSAGE_UNKNOWN = 4;
+		
 	}
 
 	public static class Server {
@@ -149,7 +184,7 @@ public class Constant {
 		public static final int SERVER_PORT = 45910;
 		public static final int HASH_SERVER_PORT = 50813;
 		public static final int SERVER_BUF = 1024 * 1024; // 1MB
-		public static final int MAX_RECEPT_DATA_HASH_LIST = 1000;
+		public static final int MAX_RECEPT_DATA_HASH_LIST = 100;
 		
 		public static final int MAX_ACCESS_PER_DAY = 10;
 		public static final int NONCE_CNT = 100;
@@ -190,6 +225,12 @@ public class Constant {
 		public static final String TEMPORARY = "\u001b[00;47m \u001b[00;33m";
 		public static final String EXCEPTION = "\u001b[00;41m \u001b[00;31m";
 		public static final String INVALID = "\u001b[00;45m \u001b[00;35m";
+	}
+	
+	public static class Verify {
+		public enum Result {
+			TARGET, SUB_TARGET, FAIL 
+		}
 	}
 	
 	public static class Work {
@@ -234,6 +275,7 @@ public class Constant {
 //			public static byte DUP_PUSH = 0x62;	// duplicate stack top data and push
 			
 			public static byte CHECK_ADDR = 0x70;
+			public static byte CHECK_SUB_REWARD = 0x71;
 			
 			
 		}

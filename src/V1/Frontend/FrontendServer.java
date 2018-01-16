@@ -206,6 +206,12 @@ public class FrontendServer extends Thread{
 		} else if(no.getType() == Constant.NetworkObject.TYPE_UTXO) {
 			DataManager.addUTXO(no.getUTXO());
 			return;
+		} else if(no.getType() == Constant.NetworkObject.TYPE_SPENT) {
+			DataManager.addUTXORemove(no.getSpent());
+			return;
+		} else if (no.getType() == Constant.NetworkObject.TYPE_ROUTINE|| no.getType() == Constant.NetworkObject.TYPE_ROUTINE_REVOKE) {
+			DataManager.receptRoutine(no);
+			return;
 		}
 		Log.log("[FrontendTable.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
 		Log.log("[FrontendTable.receptNetworkObject()] Invalid no: " + no.toString(), Constant.Log.EXCEPTION);

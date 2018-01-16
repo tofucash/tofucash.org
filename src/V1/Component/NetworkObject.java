@@ -24,9 +24,11 @@ public class NetworkObject implements Externalizable {
 	private Node node;
 	private Work work;
 	private Report report;
-	private Request request;
+	private Request[] requestList;
 	private UTXO utxo;
-	private Spent spent;
+	private Spent[] spentList;
+	private byte[] blockHash;
+	private Routine routine;
 
 	public NetworkObject() {
 		block = null;
@@ -34,9 +36,11 @@ public class NetworkObject implements Externalizable {
 		node = null;
 		work = null;
 		report = null;
-		request = null;
+		requestList = null;
 		utxo = null;
-		spent = null;
+		spentList = null;
+		blockHash = null;
+		routine = null;
 	}
 
 	public NetworkObject(int type, Object data) {
@@ -46,9 +50,11 @@ public class NetworkObject implements Externalizable {
 		node = null;
 		work = null;
 		report = null;
-		request = null;
+		requestList = null;
 		utxo = null;
-		spent = null;
+		spentList = null;
+		blockHash = null;
+		routine = null;
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
 			block = (Block) data;
 			block.removeNull();
@@ -68,11 +74,15 @@ public class NetworkObject implements Externalizable {
 		} else if (type - Constant.NetworkObject.TYPE_REPORT < 100) {
 			report = (Report) data;
 		} else if (type - Constant.NetworkObject.TYPE_REQUEST < 100) {
-			request = (Request) data;
+			requestList = (Request[]) data;
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			utxo = (UTXO) data;
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
-			spent = (Spent) data;
+			spentList = (Spent[]) data;
+		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
+			blockHash = (byte[]) data;
+		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
+			routine = (Routine) data;
 		} else {
 			throw new TofuError.UnimplementedError("Invalid NetworkObject Type");
 		}
@@ -98,14 +108,20 @@ public class NetworkObject implements Externalizable {
 	public Report getReport() {
 		return report;
 	}
-	public Request getRequest() {
-		return request;
+	public Request[] getRequest() {
+		return requestList;
 	}
 	public UTXO getUTXO() {
 		return utxo;
 	}
-	public Spent getSpent() {
-		return spent;
+	public Spent[] getSpent() {
+		return spentList;
+	}
+	public byte[] getBlockHash() {
+		return blockHash;
+	}
+	public Routine getRoutine() {
+		return routine;
 	}
 	public String toString() {
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
@@ -119,11 +135,15 @@ public class NetworkObject implements Externalizable {
 		} else if (type - Constant.NetworkObject.TYPE_REPORT < 100) {
 			return "[type: " + type + ", report: " + report + "]";
 		} else if (type - Constant.NetworkObject.TYPE_REQUEST < 100) {
-			return "[type: " + type + ", request: " + request + "]";
+			return "[type: " + type + ", request: " + Arrays.toString(requestList) + "]";
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			return "[type: " + type + ", utxo: " + utxo + "]";
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
-			return "[type: " + type + ", spent: " + spent + "]";
+			return "[type: " + type + ", spent: " + Arrays.toString(spentList) + "]";
+		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
+			return "[type: " + type + ", blockHash: " + DatatypeConverter.printHexBinary(blockHash) + "]";
+		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
+			return "[type: " + type + ", routine: " + routine + "]";
 		} else {
 			throw new TofuError.UnimplementedError("unknown type");
 		}
@@ -143,11 +163,28 @@ public class NetworkObject implements Externalizable {
 		} else if (type - Constant.NetworkObject.TYPE_REPORT < 100) {
 			report = (Report) oi.readObject();
 		} else if (type - Constant.NetworkObject.TYPE_REQUEST < 100) {
-			request = (Request) oi.readObject();
+			int requestListLength = oi.readInt();
+			requestList = new Request[requestListLength];
+			for(int i = 0; i < requestListLength; i++) {
+				requestList[i] = (Request) oi.readObject();
+			}
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			utxo = (UTXO) oi.readObject();
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
-			spent = (Spent) oi.readObject();
+			int spentListLength = oi.readInt();
+			spentList = new Spent[spentListLength];
+			for(int i = 0; i < spentListLength; i++) {
+				spentList[i] = (Spent) oi.readObject();
+			}
+		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
+			int blockHashLength = oi.readInt();
+			if(blockHashLength > Constant.Block.BYTE_BLOCK_HASH) {
+				return;
+			}
+			blockHash = new byte[blockHashLength];
+			oi.read(blockHash);
+		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
+			routine = (Routine) oi.readObject();
 		}
 	}
 
@@ -165,11 +202,22 @@ public class NetworkObject implements Externalizable {
 		} else if (type - Constant.NetworkObject.TYPE_REPORT < 100) {
 			oo.writeObject(report);
 		} else if (type - Constant.NetworkObject.TYPE_REQUEST < 100) {
-			oo.writeObject(request);
+			oo.writeInt(requestList.length);
+			for(int i = 0; i < requestList.length; i++) {
+				oo.writeObject(requestList[i]);
+			}
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
 			oo.writeObject(utxo);
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
-			oo.writeObject(spent);
+			oo.writeInt(spentList.length);
+			for(int i = 0; i < spentList.length; i++) {
+				oo.writeObject(spentList[i]);
+			}
+		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
+			oo.writeInt(blockHash.length);
+			oo.write(blockHash);
+		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
+			oo.writeObject(routine);
 		}
 	}
 }

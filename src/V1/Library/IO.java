@@ -45,6 +45,18 @@ public class IO {
 	// }
 	// return true;
 	// }
+
+	public static void moveFile(String oldPath, String newPath) {
+		File oldFile = new File(oldPath);
+		File newFile = new File(newPath);
+		if(oldFile.exists()) {
+			oldFile.renameTo(newFile);
+		}
+	}
+	public static void deleteFile(String path) {
+		File file = new File(path);
+		file.delete();
+	}
 	public static void createDir(String path) {
 		File file = new File(path);
 		if(!file.exists()) {

@@ -7,87 +7,130 @@ import java.io.ObjectOutput;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Library.Address;
 import V1.Library.Constant;
 
 public class Report implements Externalizable {
-	private byte[] hash;
-	private byte[] nonce;
-	private byte[] result;
-	private byte[] miner;
-	private byte[] target;
-	private byte[] signature;
+	public String hash;
+	public String nonce;
+	public String result;
+	public String cAddress;
+	public String fAddress;
+	public String publicKey;
+	public String signature;
 
 	public Report() {
 		hash = null;
 		nonce = null;
 		result = null;
-		miner = null;
+		cAddress = null;
+		fAddress = null;
+		publicKey = null;
+		signature = null;
 	}
 
-	public Report(byte[] hash, byte[] nonce, byte[] result, byte[] miner) {
+	public Report(String hash, String nonce, String result, String cAddress, String fAddress, String signature, String publicKey) {
 		this.hash = hash;
 		this.nonce = nonce;
 		this.result = result;
-		this.miner = miner;
+		this.cAddress = cAddress;
+		this.fAddress = fAddress;
+		this.publicKey = publicKey;
+		this.signature = signature;
 	}
-	public byte[] getHash() {
+
+	public String getHash() {
 		return hash;
 	}
-	public byte[] getNonce() {
+
+	public String getNonce() {
 		return nonce;
 	}
-	public byte[] getResult() {
+
+	public String getResult() {
 		return result;
 	}
-	public byte[] getMiner() {
-		return miner;
+
+	public String getCAddress() {
+		return cAddress;
+	}
+	public String getFAddress() {
+		return fAddress;
+	}
+	public String getPublicKey() {
+		return publicKey;
+	}
+	public String getSignature() {
+		return signature;
+	}
+
+	public void setSignature(String signature) {
+		this.signature = signature;
 	}
 
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		int hashLength = oi.readInt();
-		if (hashLength > Constant.Report.BYTE_MAX_HASH) {
+		if (hashLength > Constant.Report.BYTE_MAX_HASH*2) {
 			return;
 		}
-		hash = new byte[hashLength];
-		oi.read(hash);
-		
+		hash = oi.readLine();
+
 		int nonceLength = oi.readInt();
-		if (nonceLength > Constant.Report.BYTE_MAX_NONCE) {
+		if (nonceLength > Constant.Report.BYTE_MAX_NONCE*2) {
 			return;
 		}
-		nonce = new byte[nonceLength];
-		oi.read(nonce);
-		
+		nonce = oi.readLine();
+
 		int resultLength = oi.readInt();
-		if (resultLength > Constant.Report.BYTE_MAX_HASH) {
+		if (resultLength > Constant.Report.BYTE_MAX_HASH*2) {
 			return;
 		}
-		result = new byte[resultLength];
-		oi.read(result);
+		result = oi.readLine();
 
-		int minerLength = oi.readInt();
-		if (minerLength > Constant.Report.BYTE_MAX_MINER) {
+		int cAddressLength = oi.readInt();
+		if (cAddressLength > Constant.Report.BYTE_MAX_MINER*2) {
 			return;
 		}
-		miner = new byte[minerLength];
-		oi.read(miner);
+		cAddress = oi.readLine();
 
+		int fAddressLength = oi.readInt();
+		if (fAddressLength > Constant.Report.BYTE_MAX_MINER*2) {
+			return;
+		}
+		fAddress = oi.readLine();
+
+		int publicKeyLength = oi.readInt();
+		if (publicKeyLength > Constant.Address.BYTE_PUBLIC_KEY*2) {
+			return;
+		}
+		publicKey = oi.readLine();
+
+		int signatureLength = oi.readInt();
+		if (signatureLength > Constant.Transaction.BYTE_MAX_SIGNATURE*2) {
+			return;
+		}
+		signature = oi.readLine();
 	}
 
 	public void writeExternal(ObjectOutput oo) throws IOException {
-		oo.writeInt(hash.length);
-		oo.write(hash);
-		oo.writeInt(nonce.length);
-		oo.write(nonce);
-		oo.writeInt(result.length);
-		oo.write(result);
-		oo.writeInt(miner.length);
-		oo.write(miner);
+		oo.writeInt(hash.length());
+		oo.writeBytes(hash+"\n");
+		oo.writeInt(nonce.length());
+		oo.writeBytes(nonce+"\n");
+		oo.writeInt(result.length());
+		oo.writeBytes(result+"\n");
+		oo.writeInt(cAddress.length());
+		oo.writeBytes(cAddress+"\n");
+		oo.writeInt(fAddress.length());
+		oo.writeBytes(fAddress+"\n");
+		oo.writeInt(publicKey.length());
+		oo.writeBytes(publicKey+"\n");
+		oo.writeInt(signature.length());
+		oo.writeBytes(signature+"\n");
 	}
 
 	public String toString() {
-		return "[hash: " + DatatypeConverter.printHexBinary(hash) + ", nonce: "
-				+ DatatypeConverter.printHexBinary(nonce) + ", result: " + DatatypeConverter.printHexBinary(result) + ", miner: " + DatatypeConverter.printHexBinary(miner)
-				+ "]";
+		return "[hash: " + hash + ", nonce: "+ nonce + ", result: " + result
+				+ ", cAddress: " + cAddress + ", fAddress: " + fAddress + ", publicKey: " + publicKey + ", signature: " + signature +"]";
 	}
 }

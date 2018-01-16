@@ -43,7 +43,7 @@ public class Block implements Externalizable {
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
 		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, new byte[1],
-				0, new byte[Constant.Address.BYTE_ADDRESS], new byte[1]);
+				0, new byte[Constant.Address.BYTE_ADDRESS], new byte[1], new byte[1]);
 	}
 	
 	public synchronized boolean addTransaction(Transaction tx) {
@@ -83,16 +83,22 @@ public class Block implements Externalizable {
 	public byte[] getTarget() {
 		return header.getTarget();
 	}
+	public byte[] getSubTarget() {
+		return header.getSubTarget();
+	}
 	public long getTimestamp() {
 		return header.getTimestamp();
 	}
-	public void nonceFound(byte[] nonce, byte[] miner) {
-		header.nonceFound(nonce, miner);
+	public void nonceFound(byte[] nonce, byte[] miner, byte[] blockHash) {
+		header.nonceFound(nonce, miner, blockHash);
 	}
 	
-	public void updateHeader(byte[] prevBlockHash, byte[] target) {
+	public byte[] getBlockHash() {
+		return header.getBlockHash();
+	}
+	public void updateHeader(byte[] prevBlockHash, byte[] target, byte[] subTarget) {
 		long timestamp = Time.getTimestamp();
-		header.updateParam(timestamp, prevBlockHash, target);
+		header.updateParam(timestamp, prevBlockHash, target, subTarget);
 	}
 	
 	public void removeNull() {
@@ -105,7 +111,9 @@ public class Block implements Externalizable {
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		header = (BlockHeader) oi.readObject();
 		txList = new Transaction[header.getTxCnt()];
-		txList = (Transaction[]) oi.readObject();
+		for(int i = 0; i < header.getTxCnt(); i++) {
+			txList[i] = (Transaction) oi.readObject();
+		}
 		// for(int i = 0; i < txCnt; i++) {
 		// byte[] data = new byte[oi.readInt()];
 		// oi.read(data, 0, data.length);
@@ -122,7 +130,9 @@ public class Block implements Externalizable {
 		// oo.writeInt(data.length);
 		// oo.write(data);
 		// }
-		oo.writeObject(txList);
+		for(int i = 0; i < txList.length; i++) {
+			oo.writeObject(txList[i]);
+		}
 	}
 
 	Transaction convertByteToTx(byte[] data) {

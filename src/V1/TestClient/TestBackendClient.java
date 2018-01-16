@@ -40,9 +40,10 @@ public class TestBackendClient {
 	static byte[] address = null;
 
 	public static void main(String[] args) {
-//		init();
-//		test1();
-		// accessTest();
+		init();
+		// test1();
+//		Setting.testSetKey();
+		accessTest();
 	}
 
 	static void test1() {
@@ -90,7 +91,7 @@ public class TestBackendClient {
 		Socket socket = new Socket();
 
 		try {
-			InetSocketAddress socketAddress = new InetSocketAddress("0.0.0.0", Constant.Server.SERVER_PORT);
+			InetSocketAddress socketAddress = new InetSocketAddress("133.18.56.150", Constant.Server.SERVER_PORT);
 			socket.connect(socketAddress, 30000);
 			Log.log("buffersize: " + socket.getSendBufferSize(), Constant.Log.TEMPORARY);
 
@@ -102,21 +103,21 @@ public class TestBackendClient {
 			Block block;
 			Node node;
 
-			node = new Node("192.168.56.1", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
+			node = new Node("192.168.56.1 my ip address", 60303, "test node", Setting.getAddress(), Setting.getKeyPair());
 
 			tx = getTestTransaction();
 			block = new Block(1);
-			block.updateHeader(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
+			block.updateHeader(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 });
 			block.addTransaction(tx);
 
-			// NetworkObject no = new NetworkObject(Constant.NetworkObject.TX,
-			// tx);
+			NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_TX,
+			 tx);
 			// NetworkObject no = new
 			// NetworkObject(Constant.NetworkObject.BLOCK, block);
 			// NetworkObject no = new NetworkObject(Constant.NetworkObject.NODE,
 			// node);
-			NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_WORK,
-					new Work(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 }));
+//			NetworkObject no = new NetworkObject(Constant.NetworkObject.TYPE_WORK,
+//					new Work(new byte[] { 0x01, 0x4a, 0x02 }, new byte[] { 0x01, 0x4a, 0x02 }));
 
 			Log.log("no: " + no, Constant.Log.TEMPORARY);
 			try {
@@ -135,13 +136,13 @@ public class TestBackendClient {
 			InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
 			BufferedReader br1 = new BufferedReader(ir1);
 
-			while (is1.available() == 0)
-				;
-
-			char[] cline = new char[is1.available()];
-			br1.read(cline);
-			Log.log(new String(cline), Constant.Log.TEMPORARY);
-
+//			while (is1.available() == 0)
+//				;
+//
+//			char[] cline = new char[is1.available()];
+//			br1.read(cline);
+//			Log.log(new String(cline), Constant.Log.TEMPORARY);
+//
 			baos.close();
 			oos.close();
 			os.close();

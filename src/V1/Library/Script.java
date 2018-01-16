@@ -1,4 +1,4 @@
-package V1.Component;
+package V1.Library;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -7,32 +7,25 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
-import V1.Library.Address;
-import V1.Library.ByteUtil;
-import V1.Library.Constant;
-import V1.Library.Crypto;
-import V1.Library.IO;
-import V1.Library.Log;
-import V1.Library.Stack;
-import V1.Library.TofuException;
-import V1.Library.Constant.Script.OPCode;
+import V1.Component.Answer;
+import V1.Component.Question;
 import V1.Library.Constant.Script.Result;
 import V1.Library.Constant.Script.State;
 import V1.Library.TofuException.StackException;
 
 public class Script {
-	public Result resolve(final Question q, final Answer a, byte[] outHash) {
+	public static Result resolve(final Question q, final Answer a, byte[] outHash) {
 		Stack stack;
 
 		stack = new Stack();
 		try {
-			System.out.println("answer script: " + DatatypeConverter.printHexBinary(a.getScript()));
-			System.out.println("question script: " + DatatypeConverter.printHexBinary(q.getScript()));
+			// Log.log("answer script: " + DatatypeConverter.printHexBinary(a.getScript()));
+			// Log.log("question script: " + DatatypeConverter.printHexBinary(q.getScript()));
 			runAnswer(stack, a);
 			runQuestion(stack, q, outHash);
 			if (stack.getSp() == 1) {
 				byte[] result = stack.pop();
-				System.out.println("result: " + DatatypeConverter.printHexBinary(result));
+				// Log.log("result: " + DatatypeConverter.printHexBinary(result));
 				if (result.length == 1 && result[0] == Constant.Script.OPCode.TRUE) {
 					return Constant.Script.Result.SOLVED;
 				}
@@ -46,7 +39,7 @@ public class Script {
 
 	}
 
-	private void runQuestion(Stack stack, Question q, byte[] outHash)
+	private static void runQuestion(Stack stack, Question q, byte[] outHash)
 			throws AssertionError, StackException, Exception {
 		int i;
 		int pushByte = 0;
@@ -56,9 +49,9 @@ public class Script {
 		Constant.Script.State state = State.OP;
 		final byte[] questionScript = q.getScript();
 		byte[] buf = null;
-		System.out.println("--------------------- runQuestion -------------------------");
+		// Log.log("--------------------- runQuestion -------------------------");
 		for (i = 0; i < questionScript.length && i < Constant.Script.BYTE_MAX_QUESTION; i++) {
-			System.out.println("state: " + state + ", op: " + Integer.toHexString(questionScript[i]) + ", stack: " + stack);
+			// Log.log("state: " + state + ", op: " + Integer.toHexString(questionScript[i]) + ", stack: " + stack);
 			switch (state) {
 			case OP:
 				if (questionScript[i] == Constant.Script.OPCode.PUBK_DUP) {
@@ -85,18 +78,18 @@ public class Script {
 					}
 				} else if (questionScript[i] == Constant.Script.OPCode.EQUAL_VERIFY) {
 					buf = stack.pop();
-					System.out.println(DatatypeConverter.printHexBinary(buf));
+					// Log.log(DatatypeConverter.printHexBinary(buf));
 					if (!(ByteBuffer.wrap((buf)).equals(ByteBuffer.wrap(stack.pop())))) {
 						throw new StackException("Equal verify false");
 					}
 				} else if (questionScript[i] == Constant.Script.OPCode.CHECK_SIG) {
 					buf = stack.pop();
-					Log.log("buf : " + DatatypeConverter.printHexBinary(buf));
-					Log.log("outHash: " + DatatypeConverter.printHexBinary(outHash));
+					// Log.log("buf : " + DatatypeConverter.printHexBinary(buf));
+					// Log.log("outHash: " + DatatypeConverter.printHexBinary(outHash));
 					byte[] tmp = stack.pop();
-					Log.log("stack.pop() (sign): " + DatatypeConverter.printHexBinary(tmp));
+					// Log.log("stack.pop() (sign): " + DatatypeConverter.printHexBinary(tmp));
 					boolean result = Crypto.verify(buf, DatatypeConverter.printHexBinary(outHash).getBytes(), tmp);
-					Log.log("result: " + result, Constant.Log.TEMPORARY);
+					// Log.log("result: " + result, Constant.Log.TEMPORARY);
 					if (result) {
 						stack.push(new byte[] { Constant.Script.OPCode.TRUE });
 					} else {
@@ -107,7 +100,7 @@ public class Script {
 				} else if (questionScript[i] == Constant.Script.OPCode.TRUE) {
 					stack.push(new byte[] { Constant.Script.OPCode.TRUE });
 				} else {
-					Log.log("Invalid OPCode: " + Integer.toHexString(questionScript[i]), Constant.Log.EXCEPTION);
+					// Log.log("Invalid OPCode: " + Integer.toHexString(questionScript[i]), Constant.Log.EXCEPTION);
 					return ;
 				}
 				break;
@@ -123,17 +116,17 @@ public class Script {
 				break;
 			}
 		}
-		System.out.println("state: " + state + ", stack: " + stack);
+		// Log.log("state: " + state + ", stack: " + stack);
 	}
 
-	private void runAnswer(Stack stack, Answer a) throws AssertionError, StackException {
+	private static void runAnswer(Stack stack, Answer a) throws AssertionError, StackException {
 		int i, j;
 		int pushByte = 0;
 		Constant.Script.State state = State.OP;
 		final byte[] answerScript = a.getScript();
-		System.out.println("--------------------- runAnswer -------------------------");
+		// Log.log("--------------------- runAnswer -------------------------");
 		for (i = 0; i < answerScript.length && i < Constant.Script.BYTE_MAX_ANSWER; i++) {
-			System.out.println("state: " + state + ", op: " + Integer.toHexString(answerScript[i]) + ", stack: " + stack);
+			// Log.log("state: " + state + ", op: " + Integer.toHexString(answerScript[i]) + ", stack: " + stack);
 			switch (state) {
 			case OP:
 				if (answerScript[i] == Constant.Script.OPCode.FALSE) {
@@ -144,7 +137,7 @@ public class Script {
 				} else if (answerScript[i] == Constant.Script.OPCode.PUSH_MAX_512) {
 					state = State.PUSH_OPTION;
 				} else {
-					Log.log("Invalid OPCode: " + Integer.toHexString(answerScript[i]), Constant.Log.EXCEPTION);
+					// Log.log("Invalid OPCode: " + Integer.toHexString(answerScript[i]), Constant.Log.EXCEPTION);
 					return ;
 				}
 				break;
@@ -161,10 +154,10 @@ public class Script {
 				break;
 			}
 		}
-		System.out.println("state: " + state + ", stack: " + stack);
+		// Log.log("state: " + state + ", stack: " + stack);
 	}
 
-	State stackPush(Stack stack, byte[] script, int index, int pushByte) throws StackException {
+	private static State stackPush(Stack stack, byte[] script, int index, int pushByte) throws StackException {
 		ByteBuffer bb = ByteBuffer.allocate(pushByte);
 		bb.put(script, index, pushByte);
 		stack.push(bb.array());

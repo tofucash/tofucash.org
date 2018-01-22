@@ -96,6 +96,15 @@ public class Block implements Externalizable {
 	public byte[] getBlockHash() {
 		return header.getBlockHash();
 	}
+	public byte[] getNonce() {
+		return header.getNonce();
+	}
+	public byte[] getMiner() {
+		return header.getMiner();
+	}
+	public void resetNonce() {
+		header.resetNonce();
+	}
 	public void updateHeader(byte[] prevBlockHash, byte[] target, byte[] subTarget) {
 		long timestamp = Time.getTimestamp();
 		header.updateParam(timestamp, prevBlockHash, target, subTarget);

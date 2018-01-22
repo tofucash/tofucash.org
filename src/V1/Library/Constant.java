@@ -38,8 +38,9 @@ public class Constant {
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
 		public static final String DEFAULT_TARGET = "03ffffc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-		public static final String DEFAULT_SUB_TARGET = "0fffff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-		public static final int SUB_TARGET_SHIFT = 2;
+		public static final String DEFAULT_SUB_TARGET = "01ffff80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+		public static final int MAX_TARGET_SHIFT_LEFT = 3;
+		public static final int SUB_TARGET_SHIFT = 1;
 		public static final String DEFAULT_PREV_BLOCK_HASH = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 		public static final int BYTE_TARGET = BYTE_BLOCK_HASH; 
 		public static final int MAX_DIFFICULTY = 60*8;	// 512bit shift is actually max 
@@ -69,11 +70,13 @@ public class Constant {
 		public static final int DIFFICULTY_ADJUST_BLOCK = 10;
 		public static final int LENGTH_MAX_BLOCK_TIME_LIST = DIFFICULTY_ADJUST_BLOCK - CONFIRMATION - 1;
 		public static final int AVERAGE_BLOCK_TIME = 30;
-		public static final int TARGET_SHIFT_PER_TIME = 2;	// shift per 2s per block 
+		public static final int TARGET_SHIFT_PER_TIME = 4;	// shift per 4s per block 
 
 		public static final int NODE_PBFT_RATE = 3; 
 		
 		public static final String BLOCKCHAIN_TMP_DIR = "tmp"+File.separator;
+		
+		public static final int MAX_BLOCKCHAIN_TABLE = 10;
 	}
 
 	public static class BlockHeader {
@@ -89,6 +92,11 @@ public class Constant {
 		}
 		public static final String SIGN_ALGO = "SHA256withECDSA";
 	}
+	public static class Frontend {
+		private Frontend(){
+		}
+		public static final int MAX_BLOCKCHAIN_TABLE = Blockchain.MAX_BLOCKCHAIN_TABLE;
+	}
 	public static class IO {
 		private IO() {
 		}
@@ -96,6 +104,7 @@ public class Constant {
 	}
 	public static class Manager {
 		public static final int REQUEST_NOTIFIER_INTERVAL = 3000;
+		public static final int UPDATE_CHECKER_INTERVAL = 3000;
 	}
 	public static class MerkleTree {
 		private MerkleTree() {
@@ -113,15 +122,18 @@ public class Constant {
 		}
 
 		public static final int TYPE_BLOCK = 100;
-		public static final int TYPE_TX = 200;
-		public static final int TYPE_NODE = 300;
-
 		public static final int TYPE_BLOCK_BROADCAST = 110;
+		public static final int TYPE_BLOCK_CHECK = 120;
+		
+		public static final int TYPE_TX = 200;
 		public static final int TYPE_TX_BROADCAST = 210;
+		
+		public static final int TYPE_NODE = 300;
 		public static final int TYPE_NODE_BROADCAST = 310;
 
 		public static final int TYPE_WORK = 600;
 		public static final int TYPE_WORK_BROADCAST = 610;
+		public static final int TYPE_WORK_CHECK = 620;
 
 		public static final int TYPE_REPORT = 700;
 
@@ -129,6 +141,7 @@ public class Constant {
 		public static final int TYPE_REQUEST_BROADCAST = 810;
 		
 		public static final int TYPE_UTXO = 900;
+		public static final int TYPE_UTXO_CHECK = 910;
 		
 		public static final int TYPE_SPENT = 1000;
 
@@ -187,7 +200,7 @@ public class Constant {
 		public static final int MAX_RECEPT_DATA_HASH_LIST = 100;
 		
 		public static final int MAX_ACCESS_PER_DAY = 10;
-		public static final int NONCE_CNT = 100;
+		public static final int NONCE_CNT = 300;
 		public static final String HASH_ALGO = "sha512";
 	}
 	public static class Stack {
@@ -259,7 +272,7 @@ public class Constant {
 			public static byte PUSH32 = 0x16;	// push to stack
 			public static byte PUSH_MAX_512 = 0x17;	// PUSH_MAX_512 data.length data
 			
-			public static byte POP1_0 = 0x20;	// pop 1 byte to register1 from stack
+			public static byte POP0 = 0x20;	// pop data to register0 from stack
 			
 			public static byte EQUAL = 0x30;
 			public static byte EQUAL_VERIFY = 0x31;
@@ -275,7 +288,7 @@ public class Constant {
 //			public static byte DUP_PUSH = 0x62;	// duplicate stack top data and push
 			
 			public static byte CHECK_ADDR = 0x70;
-			public static byte CHECK_SUB_REWARD = 0x71;
+			public static byte CHECK_REWARD = 0x71;
 			
 			
 		}

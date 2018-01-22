@@ -22,8 +22,6 @@ public class Verify {
 		
 		String hash = report.getHash();
 		if(!hash.equals(DatatypeConverter.printHexBinary(work.getHash()))) {
-			Log.log("report.hash: " + report.getHash());
-			Log.log("  work.hash: " + DatatypeConverter.printHexBinary(work.getHash()));
 			Log.log("[Mining.verifyMining()] Unnecessary Hash", Constant.Log.IMPORTANT); 
 			return Result.FAIL;
 		}

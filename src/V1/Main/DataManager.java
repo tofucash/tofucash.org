@@ -29,10 +29,11 @@ import net.arnx.jsonic.web.WebServiceServlet.JSON;
 public class DataManager {
 	private static Work work;
 	static void init() {
-		byte[] zero = new byte[Constant.Work.BYTE_MAX_HASH];
-		byte[] target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
-		byte[] subTarget = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_SUB_TARGET);
-		work = new Work(zero, target, subTarget, new byte[1]);
+//		byte[] zero = new byte[Constant.Work.BYTE_MAX_HASH];
+//		byte[] target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
+//		byte[] subTarget = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_SUB_TARGET);
+//		work = new Work(zero, target, subTarget, new byte[1]);
+		updateMining(Blockchain.getBlock());
 		Log.log("DataManager init done.");
 	}
 
@@ -46,6 +47,9 @@ public class DataManager {
 			Log.log("[DataManager.updateMining()] Invalid block", Constant.Log.EXCEPTION);
 		}
 	}
+	static Work getWork() {
+		return work;
+	}
 	static Result verifyMining(Report report) {
 		return Verify.verifyMining(work, report);
 	}
@@ -53,7 +57,7 @@ public class DataManager {
 		return Verify.verifyRequest(request);
 	}
 	static Transaction makeTx(Request request) {
-		int[] amountFrom = request.getAmountFrom();
+		int[][] amountFrom = request.getAmountFrom();
 		int[] amountTo = request.getAmountTo();
 		String[] addrFromStr = request.getAddrFrom();
 		String[] addrToStr = request.getAddrTo();
@@ -75,20 +79,12 @@ public class DataManager {
 				outHash[i][j] = DatatypeConverter.parseHexBinary(outHashStr[i][j]);
 			}
 		}
-		int answerScriptLength = 0;
-		for(String[] arr: answerScriptStr) {
-			answerScriptLength += arr.length;
-		}
-		byte[][] answerScript = new byte[answerScriptLength][];
-		for (int i = 0; i < answerScriptLength; ) {
-			for(String str: answerScriptStr[i]) {
-				answerScript[i] = DatatypeConverter.parseHexBinary(str);
-				i++;
+		byte[][][] answerScript = new byte[answerScriptStr.length][][];
+		for (int i = 0; i < answerScriptStr.length; i++) {
+			answerScript[i] = new byte[answerScriptStr[i].length][];
+			for(int j = 0; j < answerScriptStr[i].length; j++) {
+				answerScript[i][j] = DatatypeConverter.parseHexBinary(answerScriptStr[i][j]);
 			}
-		}
-		int questionScriptLength = 0;
-		for(String[] arr: questionScriptStr) {
-			questionScriptLength += arr.length;
 		}
 		byte[][] questionScript = new byte[questionScriptStr.length][];
 		for (int i = 0; i < questionScriptStr.length; ) {
@@ -97,14 +93,24 @@ public class DataManager {
 				i++;
 			}
 		}
-		Input[] in = new Input[amountFrom.length];
-		Output[] out = new Output[amountTo.length];
-		int n = 0;
-		for (int i = 0; i < in.length; i++) {
+		int inputLength = 0;
+		for(int i = 0; i < outHash.length; i++) {
 			for(int j = 0; j < outHash[i].length; j++) {
-				in[i] = new Input(outHash[i][j], new Answer(answerScript[i], addrFrom[i]), amountFrom[n++]);
+				inputLength++;
 			}
 		}
+		Input[] in = new Input[inputLength];
+		Output[] out = new Output[questionScriptStr.length];
+		for (int i = 0, n = 0; n < in.length; i++) {
+			for(int j = 0; j < outHash[i].length; j++) {
+				in[n] = new Input(outHash[i][j],
+						new Answer(answerScript[i][j], 
+								addrFrom[i]), 
+						amountFrom[i][j]);
+				n++;
+			}
+		}
+		
 		for (int i = 0; i < out.length; i++) {
 			out[i] = new Output(amountTo[i], new Question(questionScript[i], addrTo[i]));
 		}

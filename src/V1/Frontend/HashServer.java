@@ -104,12 +104,7 @@ public class HashServer extends Thread {
 			ByteArrayOutputStream baos = null;
 			ByteBuffer bbuf = ByteBuffer.allocate(Constant.Server.SERVER_BUF);
 			Work work = MiningManager.getWork();
-			String json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget()) + "\", \"hash\": \""
-					+ DatatypeConverter.printHexBinary(work.getHash()) + "\", \"subTarget\": \""
-									+ DatatypeConverter.printHexBinary(work.getSubTarget()) + "\", \"fAddress\": \""
-											+ DatatypeConverter.printHexBinary(work.getFAddress()) + "\", \"start\": \""
-					+ DatatypeConverter.printHexBinary(MiningManager.getNextNonce(remoteIp)) + "\", \"cnt\": \""
-					+ Constant.Server.NONCE_CNT + "\", \"algo\": \"" + Constant.Server.HASH_ALGO + "\"}";
+			String json = "";
 			int readBytes = 0;
 			String receptBody = "";
 			Result result = null;
@@ -156,15 +151,16 @@ public class HashServer extends Thread {
 				Log.log("[HashServer.Client.run()] receptBody: " + receptBody);
 				if (!receptBody.equals("")) {
 					if ((report = MiningManager.verifyMining(receptBody, remoteIp)) != null) {
+						json = "{\"message\": \"report\"}";
 						Log.log("[HashServer.Client.run()] report: " + report, Constant.Log.IMPORTANT);
 					} else if ((request = DataManager.verifyRequest(receptBody)) != null) {
 						Log.log("[HashServer.Client.run()] request: " + request, Constant.Log.TEMPORARY);
 						if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
 						} else if (request.getType() == Constant.Request.TYPE_CHECK_BALANCE) {
 							json = DataManager.getBalance(request);
-						} else if(request.getType() == Constant.Request.TYPE_CHECK_TX) {
+						} else if (request.getType() == Constant.Request.TYPE_CHECK_TX) {
 							json = DataManager.getTransactionInfo(request);
-						} else if(request.getType() - Constant.Request.TYPE_ROUTINE < 1000  ) {
+						} else if (request.getType() - Constant.Request.TYPE_ROUTINE < 1000) {
 							json = DataManager.getRoutineInfo(request);
 						} else {
 							throw new TofuError.UnimplementedError("[HashServer.Client.run()]  Unknown Request Type");
@@ -173,7 +169,14 @@ public class HashServer extends Thread {
 				}
 				Log.loghr("[HashServer.Client.run()] recept -------------------------\n" + receptBody,
 						Constant.Log.TEMPORARY);
-
+				if (json.equals("")) {
+					json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget()) + "\", \"hash\": \""
+							+ DatatypeConverter.printHexBinary(work.getHash()) + "\", \"subTarget\": \""
+							+ DatatypeConverter.printHexBinary(work.getSubTarget()) + "\", \"fAddress\": \""
+							+ DatatypeConverter.printHexBinary(work.getFAddress()) + "\", \"start\": \""
+							+ DatatypeConverter.printHexBinary(MiningManager.getNextNonce(remoteIp)) + "\", \"cnt\": \""
+							+ Constant.Server.NONCE_CNT + "\", \"algo\": \"" + Constant.Server.HASH_ALGO + "\"}";
+				}
 				pw.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json);
 				Log.loghr(
 						"[HashServer.Client.run()] send ---------------------------\n"
@@ -198,17 +201,17 @@ public class HashServer extends Thread {
 					Log.log("[HashServer.Client.run()]: ", Constant.Log.EXCEPTION);
 				}
 			}
-			if (report != null) {			// マイニング関連のとき
+			if (report != null) { // マイニング関連のとき
 				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REPORT, report));
-			} else if (request != null) {			// リクエストのとき
+			} else if (request != null) { // リクエストのとき
 				if (request.getType() == Constant.Request.TYPE_SEND_TOFU) {
-					if(DataManager.balanceEnough(request)) {
+					if (DataManager.balanceEnough(request)) {
 						DataManager.addRequestPool(request);
 					}
-				} else if(request.getType() == Constant.Request.TYPE_CHECK_TX) {
-				} else if(request.getType() == Constant.Request.TYPE_CHECK_BALANCE) {
-				} else if(request.getType() - Constant.Request.TYPE_ROUTINE < 1000  ) {
-					if(DataManager.balanceEnough(request)) {
+				} else if (request.getType() == Constant.Request.TYPE_CHECK_TX) {
+				} else if (request.getType() == Constant.Request.TYPE_CHECK_BALANCE) {
+				} else if (request.getType() - Constant.Request.TYPE_ROUTINE < 1000) {
+					if (DataManager.balanceEnough(request)) {
 						DataManager.registerRoutine(request);
 					}
 				} else {

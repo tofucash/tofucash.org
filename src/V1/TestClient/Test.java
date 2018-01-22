@@ -30,7 +30,7 @@ import net.arnx.jsonic.web.WebServiceServlet.JSON;
 
 public class Test {
 	public static void main(String[] args) {
-
+		Log.log("00: " + Base58.encode(new byte[512]));
 	}
 	public static void addressCheck() {
 		byte[] receiver1;

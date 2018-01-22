@@ -9,23 +9,27 @@ import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.Answer;
 import V1.Component.Question;
+import V1.Component.Report;
+import V1.Component.Work;
 import V1.Library.Constant.Script.Result;
 import V1.Library.Constant.Script.State;
 import V1.Library.TofuException.StackException;
 
 public class Script {
 	public static Result resolve(final Question q, final Answer a, byte[] outHash) {
-		Stack stack;
+		// answer -- nonce fAddress cAddress
+		// question -- blockHash target subTarget checkReward
 
-		stack = new Stack();
+		Stack stack = new Stack();
 		try {
-			// Log.log("answer script: " + DatatypeConverter.printHexBinary(a.getScript()));
-			// Log.log("question script: " + DatatypeConverter.printHexBinary(q.getScript()));
+//			Log.log("answer script: " + DatatypeConverter.printHexBinary(a.getScript()));
+//			Log.log("question script: " + DatatypeConverter.printHexBinary(q.getScript()));
 			runAnswer(stack, a);
 			runQuestion(stack, q, outHash);
 			if (stack.getSp() == 1) {
 				byte[] result = stack.pop();
-				// Log.log("result: " + DatatypeConverter.printHexBinary(result));
+				// Log.log("result: " +
+				// DatatypeConverter.printHexBinary(result));
 				if (result.length == 1 && result[0] == Constant.Script.OPCode.TRUE) {
 					return Constant.Script.Result.SOLVED;
 				}
@@ -49,9 +53,9 @@ public class Script {
 		Constant.Script.State state = State.OP;
 		final byte[] questionScript = q.getScript();
 		byte[] buf = null;
-		// Log.log("--------------------- runQuestion -------------------------");
+//		 Log.log("--------------------- runQuestion -------------------------");
 		for (i = 0; i < questionScript.length && i < Constant.Script.BYTE_MAX_QUESTION; i++) {
-			// Log.log("state: " + state + ", op: " + Integer.toHexString(questionScript[i]) + ", stack: " + stack);
+//			 Log.log("state: " + state + ", op: " +Integer.toHexString(questionScript[i]) + ", stack: " + stack);
 			switch (state) {
 			case OP:
 				if (questionScript[i] == Constant.Script.OPCode.PUBK_DUP) {
@@ -59,23 +63,52 @@ public class Script {
 					byte[] publicKey = Address.getPublicKeyFromByte(buf);
 					stack.push(publicKey);
 					stack.push(buf);
+				} else if (questionScript[i] == Constant.Script.OPCode.PUSH_MAX_512) {
+					state = State.PUSH_OPTION;
 				} else if (questionScript[i] == Constant.Script.OPCode.HASH_TWICE) {
 					buf = stack.pop();
 					buf = Crypto.hashTwice(buf);
 					stack.push(buf);
-//				} else if (questionScript[i] == Constant.Script.OPCode.PUSH256) {
-//					state = State.PUSH;
-//					pushByte = 256 / 8;
-//				} else if (questionScript[i] == Constant.Script.OPCode.EQUAL) {
-//					buf = stack.pop();
-//					if (ByteBuffer.wrap(buf) != ByteBuffer.wrap(stack.pop())) {
-//						stack.push(new byte[] { Constant.Script.OPCode.TRUE });
-//					}
+					// } else if (questionScript[i] ==
+					// Constant.Script.OPCode.PUSH256) {
+					// state = State.PUSH;
+					// pushByte = 256 / 8;
+					// } else if (questionScript[i] ==
+					// Constant.Script.OPCode.EQUAL) {
+					// buf = stack.pop();
+					// if (ByteBuffer.wrap(buf) != ByteBuffer.wrap(stack.pop()))
+					// {
+					// stack.push(new byte[] { Constant.Script.OPCode.TRUE });
+					// }
 				} else if (questionScript[i] == Constant.Script.OPCode.CHECK_ADDR) {
 					buf = stack.pop();
 					if (!(ByteBuffer.wrap((buf)).equals(ByteBuffer.wrap(q.getReceiver())))) {
 						throw new StackException("Address check false");
 					}
+				} else if (questionScript[i] == Constant.Script.OPCode.CHECK_REWARD) {
+					byte[] subTarget = stack.pop();
+					byte[] target = stack.pop();
+					byte[] blockHash = stack.pop();
+					byte[] nonce = stack.pop();
+					byte[] fAddress = stack.pop();
+					byte[] cAddress = stack.pop();
+					byte[] resultHash = stack.pop();
+					// public Work(byte[] hash, byte[] target, byte[] subTarget,
+					// byte[] fAddress) {
+					// public Report(String hash, String nonce, String result,
+					// String cAddress, String fAddress, String signature,
+					// String publicKey) {
+					V1.Library.Constant.Verify.Result result = Verify.verifyMining(new Work(blockHash, target, subTarget, fAddress),
+							new Report(DatatypeConverter.printHexBinary(blockHash),
+									DatatypeConverter.printHexBinary(nonce), DatatypeConverter.printHexBinary(resultHash),
+									DatatypeConverter.printHexBinary(cAddress),
+									DatatypeConverter.printHexBinary(fAddress), "", ""));
+					if(result == V1.Library.Constant.Verify.Result.SUB_TARGET || result == V1.Library.Constant.Verify.Result.TARGET) {
+						stack.push(new byte[] { Constant.Script.OPCode.TRUE });						
+					} else {
+						stack.push(new byte[] { Constant.Script.OPCode.FALSE });
+					}
+					return ;
 				} else if (questionScript[i] == Constant.Script.OPCode.EQUAL_VERIFY) {
 					buf = stack.pop();
 					// Log.log(DatatypeConverter.printHexBinary(buf));
@@ -84,10 +117,13 @@ public class Script {
 					}
 				} else if (questionScript[i] == Constant.Script.OPCode.CHECK_SIG) {
 					buf = stack.pop();
-					// Log.log("buf : " + DatatypeConverter.printHexBinary(buf));
-					// Log.log("outHash: " + DatatypeConverter.printHexBinary(outHash));
+					// Log.log("buf : " +
+					// DatatypeConverter.printHexBinary(buf));
+					// Log.log("outHash: " +
+					// DatatypeConverter.printHexBinary(outHash));
 					byte[] tmp = stack.pop();
-					// Log.log("stack.pop() (sign): " + DatatypeConverter.printHexBinary(tmp));
+					// Log.log("stack.pop() (sign): " +
+					// DatatypeConverter.printHexBinary(tmp));
 					boolean result = Crypto.verify(buf, DatatypeConverter.printHexBinary(outHash).getBytes(), tmp);
 					// Log.log("result: " + result, Constant.Log.TEMPORARY);
 					if (result) {
@@ -95,13 +131,15 @@ public class Script {
 					} else {
 						stack.push(new byte[] { Constant.Script.OPCode.FALSE });
 					}
-				} else if (questionScript[i] == Constant.Script.OPCode.POP1_0) {
+				} else if (questionScript[i] == Constant.Script.OPCode.POP0) {
 					register[0] = stack.pop();
 				} else if (questionScript[i] == Constant.Script.OPCode.TRUE) {
 					stack.push(new byte[] { Constant.Script.OPCode.TRUE });
 				} else {
-					// Log.log("Invalid OPCode: " + Integer.toHexString(questionScript[i]), Constant.Log.EXCEPTION);
-					return ;
+					// Log.log("Invalid OPCode: " +
+					// Integer.toHexString(questionScript[i]),
+					// Constant.Log.EXCEPTION);
+					return;
 				}
 				break;
 			case PUSH:
@@ -112,6 +150,13 @@ public class Script {
 			// state = stackPop(stack, popByte, register[registerIndex]);
 			// i--;
 			// break;
+			case PUSH_OPTION:
+				pushByte = 4;
+				state = stackPush(stack, questionScript, i, pushByte);
+				state = State.PUSH;
+				pushByte = ByteBuffer.wrap(stack.pop()).getInt();
+				i += 3;
+				break;
 			case END:
 				break;
 			}
@@ -124,9 +169,10 @@ public class Script {
 		int pushByte = 0;
 		Constant.Script.State state = State.OP;
 		final byte[] answerScript = a.getScript();
-		// Log.log("--------------------- runAnswer -------------------------");
+//		 Log.log("--------------------- runAnswer -------------------------");
 		for (i = 0; i < answerScript.length && i < Constant.Script.BYTE_MAX_ANSWER; i++) {
-			// Log.log("state: " + state + ", op: " + Integer.toHexString(answerScript[i]) + ", stack: " + stack);
+//			 Log.log("state: " + state + ", op: " +
+//			 Integer.toHexString(answerScript[i]) + ", stack: " + stack);
 			switch (state) {
 			case OP:
 				if (answerScript[i] == Constant.Script.OPCode.FALSE) {
@@ -137,8 +183,10 @@ public class Script {
 				} else if (answerScript[i] == Constant.Script.OPCode.PUSH_MAX_512) {
 					state = State.PUSH_OPTION;
 				} else {
-					// Log.log("Invalid OPCode: " + Integer.toHexString(answerScript[i]), Constant.Log.EXCEPTION);
-					return ;
+					// Log.log("Invalid OPCode: " +
+					// Integer.toHexString(answerScript[i]),
+					// Constant.Log.EXCEPTION);
+					return;
 				}
 				break;
 			case PUSH:

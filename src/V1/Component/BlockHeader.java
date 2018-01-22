@@ -95,6 +95,17 @@ public class BlockHeader implements Externalizable {
 	byte[] getBlockHash() {
 		return blockHash;
 	}
+	byte[] getNonce() {
+		return nonce;
+	}
+	byte[] getMiner() {
+		return miner;
+	}
+	void resetNonce() {
+		this.miner = new byte[Constant.Address.BYTE_ADDRESS];
+		this.nonce = new byte[Constant.Block.BYTE_NONCE];
+		this.blockHash = new byte[Constant.Block.BYTE_BLOCK_HASH];
+	}
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {

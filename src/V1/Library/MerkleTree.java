@@ -33,14 +33,11 @@ public class MerkleTree {
 		// }
 		for (i = 0; i < Constant.Block.MAX_TX_POWER - 1; i++) {
 			if (size > Math.pow(2, i) && size <= Math.pow(2, i + 1)) {
-				Log.log("i: " + i, Constant.Log.TEMPORARY);
 				if (size == ((int) (Math.pow(2, i) + 1))) {
 					merkleTree.add(0, null);
-					Log.log("add 0 node", Constant.Log.TEMPORARY);
 					int insertIndex = 2;
 					int insertTimes = 1;
 					for (int j = 0; j < i - 1; j++) {
-						Log.log("insert times: " + insertTimes);
 						for (int k = 0; k < insertTimes; k++) {
 							merkleTree.add(insertIndex, new byte[Constant.Block.BYTE_BLOCK_HASH]);
 						}
@@ -57,8 +54,6 @@ public class MerkleTree {
 				}
 				int merkleTreeIndex = merkleTree.size() - 1;
 				int diff = (int) (Math.pow(2, i + 1) - 2 - merkleTreeIndex);
-				Log.log("merkleTreeIndex: " + merkleTreeIndex, Constant.Log.TEMPORARY);
-				Log.log("diff: " + diff, Constant.Log.TEMPORARY);
 				buf = ByteBuffer.allocate(Constant.Block.BYTE_BLOCK_HASH * 2);
 				buf.put(txHashList.get(merkleTreeIndex - diff));
 				if (merkleTreeIndex - diff + 1 < txHashList.size()) {

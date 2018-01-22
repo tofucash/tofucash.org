@@ -2,6 +2,7 @@ package V1.Frontend;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Map.Entry;
 import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.Answer;
+import V1.Component.Block;
 import V1.Component.Input;
 import V1.Component.NetworkObject;
 import V1.Component.Output;
@@ -20,6 +22,7 @@ import V1.Component.Spent;
 import V1.Component.Transaction;
 import V1.Component.UTXO;
 import V1.Library.Base58;
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Log;
 import V1.Library.TofuException.AddressFormatException;
@@ -35,6 +38,7 @@ public class DataManager extends Thread {
 	private static Map<String, Map<String, String>> myRoutineTable;
 	private static Map<String, Map<String, String>> routineTable;
 	private static List<Request> requestTable;
+	private static Map<Integer, Block> blockTable;
 
 	static void init() {
 		utxoTable = new UTXO();
@@ -63,7 +67,6 @@ public class DataManager extends Thread {
 			}
 			if (utxoMap != null) {
 				int j = 0;
-				Log.log("[DataManager.getBalance()] utxo.size(): " + utxoMap.size(), Constant.Log.TEMPORARY);
 				for (Entry<ByteBuffer, Output> entry : utxoMap.entrySet()) {
 					Map<String, String> map = new HashMap<String, String>();
 					map.put("outHash", DatatypeConverter.printHexBinary(entry.getKey().array()));
@@ -79,10 +82,14 @@ public class DataManager extends Thread {
 		return JSON.encode(hashBalance);
 	}
 
-	static void addUTXO(UTXO utxo) {
-		utxoTable.addAll(utxo);
-		Log.log("[UTXO.addUTXO()] Update utxoTable: " + utxoTable, Constant.Log.TEMPORARY);
+	static void addUTXO(UTXO utxoNew) {
+		Log.log("古いUTXO: " + utxoTable.toExplainString());
+		Log.log("新しいUTXO: " + utxoNew.toExplainString());
+		utxoTable = utxoNew;
+//		utxoTable.addAll(utxoNew.getAll());
+		utxoTableUsed.clear();
 	}
+
 	static void addUTXORemove(Spent[] spentList) {
 		// TODO: something
 		Log.log("[UTXO.addUTXORemove()] Update utxoTable: " + utxoTable, Constant.Log.TEMPORARY);
@@ -94,16 +101,18 @@ public class DataManager extends Thread {
 			for (int i = 0; i < outHashList.length; i++) {
 				byte[] addressFrom = DatatypeConverter.parseHexBinary(request.addrFrom[i]);
 				ByteBuffer adderssBuf = ByteBuffer.wrap(addressFrom);
-				Map<ByteBuffer, Output> utxoMapUsed = utxoTableUsed.get(adderssBuf); 
+				Map<ByteBuffer, Output> utxoMapUsed = utxoTableUsed.get(adderssBuf);
 				Map<ByteBuffer, Output> utxoMap = utxoTable.get(adderssBuf);
 				for (String outHash : outHashList[i]) {
 					ByteBuffer outHashBuf = ByteBuffer.wrap(DatatypeConverter.parseHexBinary(outHash));
-					if(utxoMapUsed != null && utxoMapUsed.containsKey(outHashBuf)) {
+					if (utxoMapUsed != null && utxoMapUsed.containsKey(outHashBuf)) {
+						Log.log("[DataManager.balanceEnough()] UTXO already used");
 						return false;
 					}
 					if (utxoMap != null && utxoMap.containsKey(outHashBuf)) {
 						utxoTableUsed.add(addressFrom, utxoMap.get(outHashBuf));
 					} else {
+						Log.log("[DataManager.balanceEnough()] UTXO does not exists");
 						return false;
 					}
 				}
@@ -234,6 +243,16 @@ public class DataManager extends Thread {
 			routineTable.put(no.getRoutine().getPublicKey(), map);
 		}
 	}
+	static void addBlock(Block block) {
+		blockTable.put(block.getBlockHeight(), block);
+		for (int i = 1; i < Constant.Frontend.MAX_BLOCKCHAIN_TABLE - 1; i++) {
+			// 一つ前のblockHeightのブロックを取得し損ねていたら問い合わせる
+			if (block.getBlockHeight() - i >= 0 && !blockTable.containsKey(block.getBlockHeight() - i)) {
+				FrontendServer.inquiryBackend(new NetworkObject(
+						Constant.NetworkObject.TYPE_BLOCK_CHECK, block.getBlockHeight() - i));
+			}
+		}
+	}
 
 	synchronized static void addRequestPool(Request request) {
 		synchronized (requestTable) {
@@ -242,27 +261,66 @@ public class DataManager extends Thread {
 	}
 
 	public void run() {
-		try {
-			Thread.sleep(Constant.Manager.REQUEST_NOTIFIER_INTERVAL);
-			notifyRequest();
-		} catch (Exception e) {
-			e.printStackTrace();
+		new RequestNotifyer().start();
+		new UpdateChecker().start();
+	}
+
+	class RequestNotifyer extends Thread {
+		public void run() {
+			byte[] last = new byte[1];
+			byte[] current;
+			while(true) {
+				try {
+					Thread.sleep(Constant.Manager.REQUEST_NOTIFIER_INTERVAL);
+					if(requestTable.size() == 0) {
+						continue;
+					}
+					current = ByteUtil.getByteObject(requestTable);
+					if(!Arrays.equals(current, last)) {
+						notifyRequest();
+						last = current;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		private void notifyRequest() {
+			synchronized (requestTable) {
+				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST,
+						requestTable.toArray(new Request[requestTable.size()])));
+				Spent[] spentList = new Spent[requestTable.size()];
+				int i = 0;
+				for (Request request : requestTable) {
+					spentList[i++] = new Spent(request.getAddrFrom(), request.getAddrFrom());
+				}
+				FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_SPENT, spentList));
+				requestTable.clear();
+			}
 		}
 	}
 
-	private void notifyRequest() {
-		synchronized (requestTable) {
-			FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST, requestTable.toArray()));
-			Spent[] spentList = new Spent[requestTable.size()];
-			int i = 0;
-			for (Request request : requestTable) {
-				spentList[i++] = new Spent(request.getAddrFrom(), request.getAddrFrom());
+	class UpdateChecker extends Thread {
+		public void run() {
+			byte[] last = new byte[1];
+			byte[] current;
+			while(true) {
+				try {
+					Thread.sleep(Constant.Manager.UPDATE_CHECKER_INTERVAL);
+					current = ByteUtil.getByteObject(MiningManager.getWork());
+					if(!Arrays.equals(current, last)) {
+						checkUpdate();						
+					}
+					last = current;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
-			FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_SPENT, spentList));
-			requestTable.clear();
 		}
-	}
-	private void checkUpdate() {
-		
+
+		private void checkUpdate() throws Exception {
+			FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_WORK_CHECK, MiningManager.getWork()));
+		}
 	}
 }

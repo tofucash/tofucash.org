@@ -27,8 +27,9 @@ public class NetworkObject implements Externalizable {
 	private Request[] requestList;
 	private UTXO utxo;
 	private Spent[] spentList;
-	private byte[] blockHash;
+	private byte[] hash;
 	private Routine routine;
+	private int blockHeight;
 
 	public NetworkObject() {
 		block = null;
@@ -39,8 +40,9 @@ public class NetworkObject implements Externalizable {
 		requestList = null;
 		utxo = null;
 		spentList = null;
-		blockHash = null;
+		hash = null;
 		routine = null;
+		blockHeight = -1;
 	}
 
 	public NetworkObject(int type, Object data) {
@@ -53,9 +55,14 @@ public class NetworkObject implements Externalizable {
 		requestList = null;
 		utxo = null;
 		spentList = null;
-		blockHash = null;
+		hash = null;
 		routine = null;
+		blockHeight = -1;
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
+			if(type == Constant.NetworkObject.TYPE_BLOCK_CHECK) {
+				blockHeight = (int) data;
+				return ;
+			}
 			block = (Block) data;
 			block.removeNull();
 			Iterator<Transaction> it;
@@ -76,11 +83,15 @@ public class NetworkObject implements Externalizable {
 		} else if (type - Constant.NetworkObject.TYPE_REQUEST < 100) {
 			requestList = (Request[]) data;
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
+			if(type == Constant.NetworkObject.TYPE_UTXO_CHECK) {
+				blockHeight = (int) data;
+				return ;
+			}
 			utxo = (UTXO) data;
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
 			spentList = (Spent[]) data;
 		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
-			blockHash = (byte[]) data;
+			hash = (byte[]) data;
 		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
 			routine = (Routine) data;
 		} else {
@@ -117,14 +128,20 @@ public class NetworkObject implements Externalizable {
 	public Spent[] getSpent() {
 		return spentList;
 	}
-	public byte[] getBlockHash() {
-		return blockHash;
+	public byte[] getHash() {
+		return hash;
 	}
 	public Routine getRoutine() {
 		return routine;
 	}
+	public int getBlockHeight() {
+		return blockHeight;
+	}
 	public String toString() {
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
+			if(type == Constant.NetworkObject.TYPE_BLOCK_CHECK) {
+				return "[type: " + type + ", blockHeight: " + blockHeight + "]";
+			}
 			return "[type: " + type + ", block: " + block.toString() + "]";
 		} else if (type - Constant.NetworkObject.TYPE_TX < 100) {
 			return "[type: " + type + ", tx:" + tx.toString() + "]";
@@ -137,11 +154,14 @@ public class NetworkObject implements Externalizable {
 		} else if (type - Constant.NetworkObject.TYPE_REQUEST < 100) {
 			return "[type: " + type + ", request: " + Arrays.toString(requestList) + "]";
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
+			if(type == Constant.NetworkObject.TYPE_UTXO_CHECK) {
+				return "[type: " + type + ", blockHeight: " + blockHeight + "]";
+			}
 			return "[type: " + type + ", utxo: " + utxo + "]";
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
 			return "[type: " + type + ", spent: " + Arrays.toString(spentList) + "]";
 		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
-			return "[type: " + type + ", blockHash: " + DatatypeConverter.printHexBinary(blockHash) + "]";
+			return "[type: " + type + ", hash: " + DatatypeConverter.printHexBinary(hash) + "]";
 		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
 			return "[type: " + type + ", routine: " + routine + "]";
 		} else {
@@ -153,7 +173,11 @@ public class NetworkObject implements Externalizable {
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		type = (int) oi.readObject();
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
-			block = (Block) oi.readObject();
+			if(type == Constant.NetworkObject.TYPE_BLOCK_CHECK) {
+				blockHeight = oi.readInt();
+			} else {
+				block = (Block) oi.readObject();
+			}
 		} else if (type - Constant.NetworkObject.TYPE_TX < 100) {
 			tx = (Transaction) oi.readObject();
 		} else if (type - Constant.NetworkObject.TYPE_NODE < 100) {
@@ -169,7 +193,11 @@ public class NetworkObject implements Externalizable {
 				requestList[i] = (Request) oi.readObject();
 			}
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
-			utxo = (UTXO) oi.readObject();
+			if(type == Constant.NetworkObject.TYPE_UTXO_CHECK) {
+				blockHeight = oi.readInt();
+			} else {
+				utxo = (UTXO) oi.readObject();
+			}
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
 			int spentListLength = oi.readInt();
 			spentList = new Spent[spentListLength];
@@ -181,8 +209,8 @@ public class NetworkObject implements Externalizable {
 			if(blockHashLength > Constant.Block.BYTE_BLOCK_HASH) {
 				return;
 			}
-			blockHash = new byte[blockHashLength];
-			oi.read(blockHash);
+			hash = new byte[blockHashLength];
+			oi.read(hash);
 		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
 			routine = (Routine) oi.readObject();
 		}
@@ -192,7 +220,11 @@ public class NetworkObject implements Externalizable {
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeObject(type);
 		if (type - Constant.NetworkObject.TYPE_BLOCK < 100) {
-			oo.writeObject(block);
+			if(type == Constant.NetworkObject.TYPE_BLOCK_CHECK) {
+				oo.writeInt(blockHeight);
+			} else {
+				oo.writeObject(block);				
+			}
 		} else if (type - Constant.NetworkObject.TYPE_TX < 100) {
 			oo.writeObject(tx);
 		} else if (type - Constant.NetworkObject.TYPE_NODE < 100) {
@@ -207,15 +239,19 @@ public class NetworkObject implements Externalizable {
 				oo.writeObject(requestList[i]);
 			}
 		} else if (type - Constant.NetworkObject.TYPE_UTXO < 100) {
-			oo.writeObject(utxo);
+			if(type == Constant.NetworkObject.TYPE_UTXO_CHECK) {
+				oo.writeInt(blockHeight);
+			} else {
+				oo.writeObject(utxo);
+			}
 		} else if (type - Constant.NetworkObject.TYPE_SPENT < 100) {
 			oo.writeInt(spentList.length);
 			for(int i = 0; i < spentList.length; i++) {
 				oo.writeObject(spentList[i]);
 			}
 		} else if (type - Constant.NetworkObject.TYPE_BLOCK_HASH < 100) {
-			oo.writeInt(blockHash.length);
-			oo.write(blockHash);
+			oo.writeInt(hash.length);
+			oo.write(hash);
 		} else if (type - Constant.NetworkObject.TYPE_ROUTINE < 100) {
 			oo.writeObject(routine);
 		}

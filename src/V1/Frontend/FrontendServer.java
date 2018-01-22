@@ -23,10 +23,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
 import java.util.regex.Pattern;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Component.Block;
 import V1.Component.NetworkObject;
 import V1.Component.Node;
 import V1.Component.Work;
@@ -36,7 +39,7 @@ import V1.Library.Crypto;
 import V1.Library.IO;
 import V1.Library.Log;
 
-public class FrontendServer extends Thread{
+public class FrontendServer extends Thread {
 	private static List<byte[]> receptDataHashList;
 	private static Map<String, Node> backendTable;
 	private static Map<String, Node> frontendTable;
@@ -57,23 +60,23 @@ public class FrontendServer extends Thread{
 			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_FRONTEND_DIR + file.getName()));
 			frontendTable.put(tmp.getIp(), tmp);
 		}
-		
+
 		Log.log("Server init done.");
 	}
 
 	public void run() {
 		try {
 			ServerSocket ss = new ServerSocket(Constant.Server.SERVER_PORT);
-			Log.log("FrontendServer.init()] ready: port[ " + Constant.Server.SERVER_PORT+" ]");
+			Log.log("FrontendServer.init()] ready: port[ " + Constant.Server.SERVER_PORT + " ]");
 
 			while (true) {
 				try {
 					Socket soc = ss.accept();
 					String remoteIp = soc.getRemoteSocketAddress().toString().replaceAll("/(.*):.*", "$1");
-					if(blacklist.contains(remoteIp)) {
+					if (blacklist.contains(remoteIp)) {
 						Log.log("[Blacklist node] access denied not trusted ip [" + remoteIp + "]");
 						soc.close();
-					} else if(backendTable.containsKey(remoteIp) || frontendTable.containsKey(remoteIp)) {
+					} else if (backendTable.containsKey(remoteIp) || frontendTable.containsKey(remoteIp)) {
 						new Client(soc, remoteIp).start();
 					} else {
 						Log.log("[Unknown node] access denied not trusted ip [" + remoteIp + "]");
@@ -92,6 +95,7 @@ public class FrontendServer extends Thread{
 	private class Client extends Thread {
 		private Socket soc;
 		private String remoteIp;
+
 		public Client(Socket soc, String remoteIp) {
 			this.soc = soc;
 			this.remoteIp = remoteIp;
@@ -141,7 +145,7 @@ public class FrontendServer extends Thread{
 						break;
 
 					}
-				}				
+				}
 				receptNetworkObject(bbuf, remoteIp, pw);
 				pw.write("[Frontendserver.Client.run()] Accepted");
 				pw.flush();
@@ -156,6 +160,7 @@ public class FrontendServer extends Thread{
 			}
 		}
 	}
+
 	static void receptNetworkObject(ByteBuffer bbuf, String remoteIp, PrintWriter pw) {
 		NetworkObject no = null;
 		try {
@@ -169,52 +174,79 @@ public class FrontendServer extends Thread{
 			return;
 		}
 
-		try {
-			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
-			if (ByteUtil.contains(receptDataHashList, hash)) {
-				Log.log("[FrontendServer.receptNetworkObject()] Already recept: " + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
-				return;
-			} else {
-				receptDataHashList.add(hash);
-				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
-					receptDataHashList.remove(0);
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			Log.log("[FrontendServer.receptNetworkObject()] Invalid NetworkObject: ", Constant.Log.EXCEPTION);
-			return;
-		}
+		Log.log("[BackendServer.receptNetworkObject()] ip: "+remoteIp+", no: " + no, Constant.Log.TEMPORARY);
+		Log.log("[BackendServer.receptNetworkObject()] AlreadyReceptRejectMode off");
+//		try {
+//			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
+//			if (ByteUtil.contains(receptDataHashList, hash)) {
+//				Log.log("[FrontendServer.receptNetworkObject()] Already recept: "
+//						+ DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
+//				return;
+//			} else {
+//				receptDataHashList.add(hash);
+//				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
+//					receptDataHashList.remove(0);
+//				}
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			Log.log("[FrontendServer.receptNetworkObject()] Invalid NetworkObject: ", Constant.Log.EXCEPTION);
+//			return;
+//		}
 
-		Log.log("[FrontendServer.receptNetworkObject()] no: " + no, Constant.Log.TEMPORARY);
-
-		if (no.getType() == Constant.NetworkObject.TYPE_TX || no.getType() == Constant.NetworkObject.TYPE_TX_BROADCAST) {
+		if (no.getType() == Constant.NetworkObject.TYPE_TX
+				|| no.getType() == Constant.NetworkObject.TYPE_TX_BROADCAST) {
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK
 				|| no.getType() == Constant.NetworkObject.TYPE_BLOCK_BROADCAST) {
+			DataManager.addBlock(no.getBlock());
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_NODE
 				|| no.getType() == Constant.NetworkObject.TYPE_NODE_BROADCAST) {
-			if(remoteIp.equals(no.getNode().getIp())) {
+			if (remoteIp.equals(no.getNode().getIp())) {
 				frontendTable.put(remoteIp, no.getNode());
-				Log.log("[FrontendServer.receptNetworkObject()] Update frontendTable: "+frontendTable.toString());
+				Log.log("[FrontendServer.receptNetworkObject()] Update frontendTable: " + frontendTable.toString());
 				return;
 			}
-		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK|| no.getType() == Constant.NetworkObject.TYPE_WORK_BROADCAST) {
-			MiningManager.receptWork(no, pw);
+		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK
+				|| no.getType() == Constant.NetworkObject.TYPE_WORK_BROADCAST) {
+			// workが変わっていればアップデートし、utxoとブロックデータをアップデートする
+			if (no.getWork() != MiningManager.getWork()) {
+				MiningManager.receptWork(no);
+				FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_UTXO_CHECK, -1));
+				FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_CHECK, -1));
+			}
 			return;
-		} else if(no.getType() == Constant.NetworkObject.TYPE_UTXO) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_UTXO) {
 			DataManager.addUTXO(no.getUTXO());
 			return;
-		} else if(no.getType() == Constant.NetworkObject.TYPE_SPENT) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_SPENT) {
 			DataManager.addUTXORemove(no.getSpent());
 			return;
-		} else if (no.getType() == Constant.NetworkObject.TYPE_ROUTINE|| no.getType() == Constant.NetworkObject.TYPE_ROUTINE_REVOKE) {
+		} else if (no.getType() == Constant.NetworkObject.TYPE_ROUTINE
+				|| no.getType() == Constant.NetworkObject.TYPE_ROUTINE_REVOKE) {
 			DataManager.receptRoutine(no);
 			return;
 		}
-		Log.log("[FrontendTable.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]", Constant.Log.EXCEPTION);
+		Log.log("[FrontendTable.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]",
+				Constant.Log.EXCEPTION);
 		Log.log("[FrontendTable.receptNetworkObject()] Invalid no: " + no.toString(), Constant.Log.EXCEPTION);
+	}
+
+	static void inquiryBackend(NetworkObject no) {
+		Random rand = new Random();
+		Node node;
+		int nodeNum = rand.nextInt(backendTable.size());
+		Iterator<Entry<String, Node>> it = backendTable.entrySet().iterator();
+		for (int i = 0; i < nodeNum && it.hasNext(); i++) {
+			it.next();
+		}
+		node = it.next().getValue();
+		char[] ret = access(no, node);
+		if(ret == null) {
+			Log.log("[FrontendServer] Access another node");
+			inquiryBackend(no);
+		}
 	}
 
 	static void shareBackend(NetworkObject no) {
@@ -223,8 +255,14 @@ public class FrontendServer extends Thread{
 			return;
 		}
 		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
-		broadcast(no, backendTable);
+		for (Iterator<Node> it = backendTable.values().iterator(); it.hasNext(); ) {
+			if(access(no, it.next()) == null) {
+				Log.log("[share--end] 3count after remove");
+//				it.remove();
+			}
+		}
 	}
+
 	static void shareFrontend(NetworkObject no) {
 		// nonce range share?
 		if (!Setting.BROADCAST_FRONTEND) {
@@ -232,59 +270,63 @@ public class FrontendServer extends Thread{
 			return;
 		}
 		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
-		broadcast(no, frontendTable);
+		for (Iterator<Node> it = frontendTable.values().iterator(); it.hasNext(); ) {
+			if(access(no, it.next()) == null) {
+				Log.log("[share--end] 3count after remove");
+//				it.remove();
+			}
+		}
 	}
-	private static void broadcast(NetworkObject no, Map<String, Node> remote) {
-		for (Iterator<Node> it = remote.values().iterator(); it.hasNext(); ) {
-			Node node = it.next();
-			Socket socket = new Socket();
-			Log.log("[FrontendServer.broadcast()] to: " + node.getIp()+":"+node.getPort());
+
+	private static char[] access(NetworkObject no, Node node) {
+		Socket socket = new Socket();
+		Log.log("[FrontendServer.broadcast()] to: " + node.getIp() + ":" + node.getPort());
+
+		try {
+			InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
+			socket.connect(socketAddress, 30000);
+
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ObjectOutputStream oos = null;
+			byte[] data = null;
+			OutputStream os = null;
 
 			try {
-				InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
-				socket.connect(socketAddress, 30000);
+				oos = new ObjectOutputStream(baos);
+				oos.writeObject(no);
+				data = baos.toByteArray();
 
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				ObjectOutputStream oos = null;
-				byte[] data = null;
-				OutputStream os = null;
-
-				try {
-					oos = new ObjectOutputStream(baos);
-					oos.writeObject(no);
-					data = baos.toByteArray();
-
-					os = socket.getOutputStream();
-					os.write(data);
-					os.flush();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-				InputStream is1 = socket.getInputStream();
-				InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
-				BufferedReader br1 = new BufferedReader(ir1);
-
-				while (is1.available() == 0)
-					;
-
-				char[] cline = new char[is1.available()];
-				br1.read(cline);
-				Log.log("[FrontendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
-
-				baos.close();
-				oos.close();
-				os.close();
-				ir1.close();
-				br1.close();
-				is1.close();
-
-				socket.close();
+				os = socket.getOutputStream();
+				os.write(data);
+				os.flush();
 			} catch (Exception e) {
 				e.printStackTrace();
-				Log.log("[FrontendServer.broadcast()] Cannot connection and detach: " + node.getIp()+":"+node.getPort(), Constant.Log.IMPORTANT);
-				it.remove();
 			}
+
+			InputStream is1 = socket.getInputStream();
+			InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
+			BufferedReader br1 = new BufferedReader(ir1);
+
+			while (is1.available() == 0)
+				;
+
+			char[] cline = new char[is1.available()];
+			br1.read(cline);
+			Log.log("[FrontendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+
+			baos.close();
+			oos.close();
+			os.close();
+			ir1.close();
+			br1.close();
+			is1.close();
+			socket.close();
+			return cline;
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("[FrontendServer.broadcast()] Cannot connection and detach: " + node.getIp() + ":" + node.getPort(),
+					Constant.Log.IMPORTANT);
+			return null;
 		}
 	}
 }

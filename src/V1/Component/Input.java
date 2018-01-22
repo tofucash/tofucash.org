@@ -62,6 +62,6 @@ public class Input implements Externalizable {
 	}
 
 	public String toString() {
-		return "[outTxHash: " + DatatypeConverter.printHexBinary(outHash) + ", answer: " + answer.toString() + ", amount: " + amount+ "]";
+		return "[outHash: " + DatatypeConverter.printHexBinary(outHash) + ", answer: " + answer.toString() + ", amount: " + amount+ "]";
 	}
 }

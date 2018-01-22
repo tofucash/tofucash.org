@@ -17,7 +17,7 @@ public class Request implements Externalizable {
 	public int type;
 	public int version;
 	public int lockTime;
-	public int[] amountFrom;
+	public int[][] amountFrom;
 	public int[] amountTo;
 	public String[] addrFrom;
 	public String[] addrTo;
@@ -43,7 +43,7 @@ public class Request implements Externalizable {
 		publicKey = null;
 	}
 
-	public Request(int type, int version, int lockTime, int[] amountFrom, int[] amountTo, String[] addrFrom, String[] addrTo, String[][] outHash,
+	public Request(int type, int version, int lockTime, int[][] amountFrom, int[] amountTo, String[] addrFrom, String[] addrTo, String[][] outHash,
 			String[][] answerScript, String[][] questionScript, String signature, String publicKey) {
 		this.type = type;
 		this.version = version;
@@ -95,7 +95,7 @@ public class Request implements Externalizable {
 		return lockTime;
 	}
 
-	public int[] getAmountFrom() {
+	public int[][] getAmountFrom() {
 		return amountFrom;
 	}
 
@@ -139,14 +139,29 @@ public class Request implements Externalizable {
 		} else if(type == Constant.Request.TYPE_CHECK_TX) {
 			return "[type: "+ type+ ", outHash "+ Arrays.toString(outHash)+"]";
 		} else if(type == Constant.Request.TYPE_SEND_TOFU || type - Constant.Request.TYPE_ROUTINE < 100) {
-			return "[type: " + type + ", version: "+version+", lockTime: "+lockTime + ", amount: " + Arrays.toString(amountFrom) + ", amountTo: " + Arrays.toString(amountTo)
+			String str = "[type: " + type + ", version: "+version+", lockTime: "+lockTime + ", amountFrom: ";
+			for(int[] amount: amountFrom) {
+				str += Arrays.toString(amountFrom);
+			}
+			str += ", amountTo: " + Arrays.toString(amountTo)
 			+ ", addrFrom: " + Arrays.toString(addrFrom) + ", addrTo: "
-			+ Arrays.toString(addrTo) + ", outHash: "
-			+ Arrays.toString(outHash) + ", answerScript: "
-			+ Arrays.toString(answerScript) + ", questionScript: "
-			+ Arrays.toString(questionScript) + ", signature: "
-					+ signature + ", publicKey: "
+			+ Arrays.toString(addrTo) + ", outHash: ";
+			for(String[] hash: outHash) {
+				str += Arrays.toString(hash);
+			}
+			
+			str += ", answerScript: ";
+			for(String[] script: answerScript) {
+				str += Arrays.toString(script); 
+			}
+			
+			str += ", questionScript: ";
+			for(String[] script: questionScript) {
+				str += Arrays.toString(script); 
+			}
+			str +=", signature: " + signature + ", publicKey: "
 							+ publicKey + "]";
+			return str;
 		} else {
 			throw new TofuError.UnimplementedError("Unknown Request Type");
 		}
@@ -156,13 +171,20 @@ public class Request implements Externalizable {
 		type = oi.readInt();
 		version = oi.readInt();
 		lockTime = oi.readInt();
-		int amountFromLength = oi.readInt();
-		if (amountFromLength > Constant.Transaction.MAX_INPUT_OUTPUT) {
+		int amountFromListLength = oi.readInt();
+		if (amountFromListLength > Constant.Transaction.MAX_INPUT_OUTPUT) {
 			return;
 		}
-		amountFrom = new int[amountFromLength];
-		for (int i = 0; i < amountFromLength; i++) {
-			amountFrom[i] = oi.readInt();
+		amountFrom = new int[amountFromListLength][];
+		for (int i = 0; i < amountFromListLength; i++) {
+			int amountFromLength = oi.readInt();
+			if(amountFromLength > Constant.Transaction.MAX_INPUT_OUTPUT) {
+				return;
+			}
+			amountFrom[i] = new int[amountFromLength];
+			for(int j = 0; j < amountFromLength; j++) {
+				amountFrom[i][j] = oi.readInt();
+			}
 		}
 
 		int amountToLength = oi.readInt();
@@ -282,7 +304,10 @@ public class Request implements Externalizable {
 		oo.writeInt(lockTime);
 		oo.writeInt(amountFrom.length);
 		for(int i = 0; i < amountFrom.length; i++) {
-			oo.writeInt(amountFrom[i]);
+			oo.writeInt(amountFrom[i].length);
+			for(int j = 0; j < amountFrom[i].length; j++) {
+				oo.writeInt(amountFrom[i][j]);
+			}
 		}
 		oo.writeInt(amountTo.length);
 		for(int i = 0; i < amountTo.length; i++) {

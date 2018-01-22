@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.bind.DatatypeConverter;
 
+import V1.Component.Block;
 import V1.Component.NetworkObject;
 import V1.Component.Node;
 import V1.Component.Request;
@@ -50,8 +51,10 @@ public class BackendServer extends Thread {
 	private static List<byte[]> receptDataHashList;
 	private static Map<String, Node> backendTable;
 	private static Map<String, Node> frontendTable;
+	private static Map<String, Integer> unreachableTable;
 	private static Map<ByteBuffer, Set<String>> pbftTable;
 	private static Map<ByteBuffer, Set<String>> pbftHashTable;
+	private static Map<ByteBuffer, Block> blockTable;
 
 	static void init() throws Exception {
 		receptDataHashList = new ArrayList<byte[]>();
@@ -69,7 +72,8 @@ public class BackendServer extends Thread {
 		}
 		pbftTable = new HashMap<ByteBuffer, Set<String>>();
 		pbftHashTable = new HashMap<ByteBuffer, Set<String>>();
-
+		unreachableTable = new HashMap<String, Integer>();
+		blockTable = new HashMap<ByteBuffer ,Block>();
 		Log.log("Server init done.");
 	}
 
@@ -177,29 +181,30 @@ public class BackendServer extends Thread {
 			e.printStackTrace();
 			return;
 		}
-		Log.log("[BackendServer.receptNetworkObject()] no: " + no, Constant.Log.TEMPORARY);
-		try {
-			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
-			if (ByteUtil.contains(receptDataHashList, hash)) {
-				Log.log("[BackendServer.receptNetworkObject()] Already recept: "
-						+ DatatypeConverter.printHexBinary(hash), Constant.Log.IMPORTANT);
-				return;
-			} else {
-				receptDataHashList.add(hash);
-				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
-					receptDataHashList.remove(0);
-				}
-			}
-		} catch (Exception e) {
-			Log.log("[BackendServer.receptNetworkObject()] Invalid NetworkObject", Constant.Log.EXCEPTION);
-			e.printStackTrace();
-			return;
-		}
+//		Log.log("[BackendServer.receptNetworkObject()] ip: "+remoteIp+", no: " + no, Constant.Log.TEMPORARY);
+//		Log.log("[BackendServer.receptNetworkObject()] AlreadyReceptRejectMode off", Constant.Log.TEMPORARY);
+//		try {
+//			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
+//			if (ByteUtil.contains(receptDataHashList, hash)) {
+//				Log.log("[BackendServer.receptNetworkObject()] Already recept: "
+//						+ DatatypeConverter.printHexBinary(hash), Constant.Log.IMPORTANT);
+//				return;
+//			} else {
+//				receptDataHashList.add(hash);
+//				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
+//					receptDataHashList.remove(0);
+//				}
+//			}
+//		} catch (Exception e) {
+//			Log.log("[BackendServer.receptNetworkObject()] Invalid NetworkObject", Constant.Log.EXCEPTION);
+//			e.printStackTrace();
+//			return;
+//		}
 
 		if (no.getType() == Constant.NetworkObject.TYPE_TX
 				|| no.getType() == Constant.NetworkObject.TYPE_TX_BROADCAST) {
 			// 新しいトランザクションが送られてきた
-			Blockchain.addTransaction(no);
+			Blockchain.addTransaction(no.getTx());
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK) {
 			// マイニング成功した新しいブロックが送られてきた
@@ -207,8 +212,9 @@ public class BackendServer extends Thread {
 				byte[] blockHash = Crypto.hash512(ByteUtil.getByteObject(no));
 				ByteBuffer buf = ByteBuffer.wrap(blockHash);
 				if (!pbftTable.containsKey(buf)) {
-					if (Blockchain.addBlock(no)) {
+					if (Blockchain.verifyBlock(no.getBlock(), null)) {
 						pbftTable.put(buf, new HashSet<String>());
+						blockTable.put(buf, no.getBlock());
 					}
 				} else {
 					Log.log("[BackendServer.receptNetworkObject()] Already recept block from other node");
@@ -233,7 +239,7 @@ public class BackendServer extends Thread {
 								.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_HASH, blockHash));
 					}
 				} else {
-					if (Blockchain.addBlock(no)) {
+					if (Blockchain.verifyBlock(no.getBlock(), null)) {
 						pbftTable.put(buf, new HashSet<String>());
 					}
 				}
@@ -244,13 +250,13 @@ public class BackendServer extends Thread {
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK_HASH) {
 			// マイニングを認めた他ノードがブロードキャストし合い、一定以上のコンセンサスを得たことの通知を受信
-			ByteBuffer buf = ByteBuffer.wrap(no.getBlockHash());
+			ByteBuffer buf = ByteBuffer.wrap(no.getHash());
 			if (pbftTable.containsKey(buf)) {
 				if (pbftHashTable.containsKey(buf)) {
 					Set<String> set = pbftHashTable.get(buf);
 					set.add(remoteIp);
 					if (set.size() > backendTable.size() / Constant.Blockchain.NODE_PBFT_RATE + 1) {
-						Blockchain.goToNextBlock(buf);
+						Blockchain.goToNextBlock(blockTable.get(buf));
 					}
 				} else {
 					Set<String> set = new HashSet<String>();
@@ -258,6 +264,21 @@ public class BackendServer extends Thread {
 					pbftHashTable.put(buf, set);
 				}
 			}
+			return;
+		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK_CHECK) {
+			Block block = Blockchain.getBlock(no.getBlockHeight());
+			if(block != null) {
+				access(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK, block), frontendTable.get(remoteIp));				
+			}
+			return ;
+		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK_CHECK) {
+			Work currentWork = DataManager.getWork();
+			if(currentWork != no.getWork()) {
+				access(new NetworkObject(Constant.NetworkObject.TYPE_WORK, currentWork), frontendTable.get(remoteIp));
+			} else {
+				access(new NetworkObject(Constant.NetworkObject.TYPE_WORK, no.getWork()), frontendTable.get(remoteIp));
+			}
+			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_NODE
 				|| no.getType() == Constant.NetworkObject.TYPE_NODE_BROADCAST) {
 			//　新しいノードの接続要求
@@ -278,26 +299,29 @@ public class BackendServer extends Thread {
 				|| no.getType() == Constant.NetworkObject.TYPE_REQUEST_BROADCAST) {
 			// 様々なリクエストが来た（F層から）
 			// verify request signature
-			List<Request> requestList = Arrays.asList(no.getRequest());
+			List<Request> requestList = new ArrayList<Request>(Arrays.asList(no.getRequest()));
 			for (Iterator<Request> it = requestList.iterator(); it.hasNext();) {
 				Request request = it.next();
 				if (DataManager.verifyRequest(request)) {
 					if (no.getType() == Constant.NetworkObject.TYPE_REQUEST && Blockchain
-							.addTransaction(new NetworkObject(Constant.Blockchain.TX, DataManager.makeTx(request)))) {
+							.addTransaction(DataManager.makeTx(request))) {
 					} else {
 						it.remove();
 						Log.log("[BackendServer.receptNetworkObject()] Request invalid", Constant.Log.INVALID);
 					}
 				} else {
 					it.remove();
-					Log.log("[BackendServer.receptNetworkObject()] Request invalid", Constant.Log.INVALID);
+					Log.log("[BackendServer.receptNetworkObject()] Request signature invalid", Constant.Log.INVALID);
 				}
 			}
 			if (requestList.size() > 0) {
 				BackendServer.shareBackend(
-						new NetworkObject(Constant.NetworkObject.TYPE_REQUEST_BROADCAST, requestList.toArray()));
+						new NetworkObject(Constant.NetworkObject.TYPE_REQUEST_BROADCAST, requestList.toArray(new Request[requestList.size()])));
 			}
 			return;
+		} else if (no.getType() == Constant.NetworkObject.TYPE_UTXO_CHECK) {
+			access(new NetworkObject(Constant.NetworkObject.TYPE_UTXO, Blockchain.getUTXO()), frontendTable.get(remoteIp));
+			return ;
 		}
 		Log.log("[BackendServer.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]: " + no,
 				Constant.Log.EXCEPTION);
@@ -305,76 +329,83 @@ public class BackendServer extends Thread {
 
 	static void shareBackend(NetworkObject no) {
 		if (!Setting.BROADCAST_BACKEND) {
+			Log.log("BROADCAST_BACKEND false");
 			return;
 		}
 		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
-		broadcast(no, backendTable);
+		for (Iterator<Node> it = backendTable.values().iterator(); it.hasNext();) {
+			if (access(no, it.next()) == null) {
+				Log.log("[share--end] 3count after remove");
+//				it.remove();
+			}
+		}
 	}
 
 	static void shareFrontend(NetworkObject no) {
+		// nonce range share?
 		if (!Setting.BROADCAST_FRONTEND) {
+			Log.log("BROADCAST_FRONTEND false");
 			return;
 		}
-		if (no.getType() == Constant.NetworkObject.TYPE_WORK || no.getType() == Constant.NetworkObject.TYPE_UTXO) {
-			Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
-			broadcast(no, frontendTable);
-		} else {
-			Log.log("[BackendServer.shareFrontend()] Invalid Share Data", Constant.Log.IMPORTANT);
+		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
+		for (Iterator<Node> it = frontendTable.values().iterator(); it.hasNext();) {
+			if (access(no, it.next()) == null) {
+				Log.log("[share--end] 3count after remove");
+//				it.remove();
+			}
 		}
 	}
 
-	static void broadcast(NetworkObject no, Map<String, Node> remote) {
-		for (Iterator<Node> it = remote.values().iterator(); it.hasNext();) {
-			Node node = it.next();
-			Socket socket = new Socket();
-			Log.log("[BackendServer.broadcast()] to: " + node.getIp() + ":" + node.getPort());
+	static char[] access(NetworkObject no, Node node) {
+		Socket socket = new Socket();
+		Log.log("[BackendServer.access()] to: " + node.getIp() + ":" + node.getPort());
+
+		try {
+			InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
+			socket.connect(socketAddress, 30000);
+
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ObjectOutputStream oos = null;
+			byte[] data = null;
+			OutputStream os = null;
 
 			try {
-				InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
-				socket.connect(socketAddress, 30000);
+				oos = new ObjectOutputStream(baos);
+				oos.writeObject(no);
+				data = baos.toByteArray();
 
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				ObjectOutputStream oos = null;
-				byte[] data = null;
-				OutputStream os = null;
-
-				try {
-					oos = new ObjectOutputStream(baos);
-					oos.writeObject(no);
-					data = baos.toByteArray();
-
-					os = socket.getOutputStream();
-					os.write(data);
-					os.flush();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-				InputStream is1 = socket.getInputStream();
-				InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
-				BufferedReader br1 = new BufferedReader(ir1);
-
-				while (is1.available() == 0)
-					;
-
-				char[] cline = new char[is1.available()];
-				br1.read(cline);
-				Log.log("[BackendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
-
-				baos.close();
-				oos.close();
-				os.close();
-				ir1.close();
-				br1.close();
-				is1.close();
-
-				socket.close();
+				os = socket.getOutputStream();
+				os.write(data);
+				os.flush();
 			} catch (Exception e) {
 				e.printStackTrace();
-				Log.log("[BackendServer.broadcast()] Cannot connection and detach: " + node.getIp() + ":"
-						+ node.getPort(), Constant.Log.IMPORTANT);
-				it.remove();
 			}
+
+			InputStream is1 = socket.getInputStream();
+			InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
+			BufferedReader br1 = new BufferedReader(ir1);
+
+			while (is1.available() == 0)
+				;
+
+			char[] cline = new char[is1.available()];
+			br1.read(cline);
+			Log.log("[BackendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+
+			baos.close();
+			oos.close();
+			os.close();
+			ir1.close();
+			br1.close();
+			is1.close();
+
+			socket.close();
+			return cline;
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.log("[BackendServer.broadcast()] Cannot connection and detach: " + node.getIp() + ":" + node.getPort(),
+					Constant.Log.IMPORTANT);
+			return null;
 		}
 	}
 }

@@ -41,7 +41,7 @@ public class MiningManager {
 		Log.log("MiningManager init done.");
 	}
 
-	static void receptWork(final NetworkObject no, PrintWriter pw) {
+	static void receptWork(final NetworkObject no) {
 		work = no.getWork();
 		work.setFAddress(Setting.getByteAddress());
 		nonceList.clear();
@@ -51,9 +51,6 @@ public class MiningManager {
 			nonceList.add(Crypto.hash512(DatatypeConverter.parseHexBinary(DatatypeConverter.printHexBinary(work.getHash()) + String.format("%04d", i) + DatatypeConverter.printHexBinary(Setting.getByteAddress()))));
 		}
 		Log.log("[MiningManager.receptWork()] work update: " + work);
-		if(no.getType() == Constant.NetworkObject.TYPE_WORK) {
-			FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_WORK_BROADCAST, work));
-		}
 	}
 
 	static Work getWork() {
@@ -63,6 +60,7 @@ public class MiningManager {
 		if(!nonceList.isEmpty()) {
 			byte[] nonce = nonceList.remove(0);
 			ipNonceMap.put(ipAddress, nonce);
+			Log.log("ip: " + ipAddress + "\t nonce: " + DatatypeConverter.printHexBinary(nonce));
 			return nonce;
 		} else {
 			return new byte[Constant.Block.BYTE_NONCE];
@@ -88,14 +86,14 @@ public class MiningManager {
 			return null;
 		}
 		// nonceが与えた範囲に収まっているか確認
-		if(ipNonceMap.containsKey(ipAddress)) {
+		if(!ipNonceMap.containsKey(ipAddress)) {
 			Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
 			return null;
 		}
 		BigInteger tmp = new BigInteger(ipNonceMap.get(ipAddress));
 		BigInteger nonceNum = new BigInteger(DatatypeConverter.parseHexBinary(report.getNonce()));
 		if(nonceNum.compareTo(tmp) > 0) {
-			tmp.add(BigInteger.valueOf(Constant.Server.NONCE_CNT));
+			tmp = tmp.add(BigInteger.valueOf(Constant.Server.NONCE_CNT));
 			if(nonceNum.compareTo(tmp) > 0) {
 				Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
 				return null;

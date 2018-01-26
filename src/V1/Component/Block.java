@@ -27,7 +27,7 @@ public class Block implements Externalizable {
 	private static final long serialVersionUID = 199603311050000L;
 
 	private BlockHeader header;
-	private Transaction[] txList;
+	private ArrayList<Transaction> txList;
 
 	private List<byte[]> merkleTree;
 	private List<byte[]> txHashList;
@@ -42,7 +42,7 @@ public class Block implements Externalizable {
 	}
 
 	public Block(int blockHeight) {
-		txList = new Transaction[Constant.Block.MAX_TX];
+		txList = new ArrayList<Transaction>();
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
 		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, new byte[1], 0,
@@ -52,7 +52,7 @@ public class Block implements Externalizable {
 
 	// genesisblockのため
 	public Block(int blockHeight, byte[] prevBlockHash, byte[] target, byte[] subTarget) {
-		txList = new Transaction[Constant.Block.MAX_TX];
+		txList = new ArrayList<Transaction>();
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
 		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, prevBlockHash, 0,
@@ -74,8 +74,7 @@ public class Block implements Externalizable {
 				return false;
 			}
 			header.updateMerkleRoot(merkleTree.get(0));
-			txList[header.getTxCnt()] = tx;
-			header.incrementTx();
+			txList.add(tx);
 			return true;
 		}
 	}
@@ -88,31 +87,29 @@ public class Block implements Externalizable {
 			Log.log("[Block.addTransaction()] Invalid data", Constant.Log.EXCEPTION);
 			return false;
 		}
-		if (!MerkleTree.updateMerkleTree(merkleTree, txHashList)) {
-			merkleTree.remove(merkleTree.size() - 1);
+		if (MerkleTree.updateMerkleTree(merkleTree, txHashList)) {
+			try {
+				merkleTree.remove(merkleTree.size() - 1);
+			} catch(Exception e){
+				Log.log("[Block.addTransactionNotLock()] Merkle Tree Invalid", Constant.Log.INVALID);
+			}
 			return false;
 		}
 		header.updateMerkleRoot(merkleTree.get(0));
-		txList[header.getTxCnt()] = tx;
-		header.incrementTx();
+		txList.add(tx);
 		return true;
 	}
 
 	public synchronized void removeInvalidTx(int index) {
 		synchronized (txListLock) {
-			header.resetTxCnt();
-			Transaction[] txListOld = new Transaction[Constant.Block.MAX_TX];
-			txList = new Transaction[Constant.Block.MAX_TX];
+			ArrayList<Transaction> oldTxList = (ArrayList<Transaction>) txList.clone();
 			merkleTree = new ArrayList<byte[]>();
 			txHashList = new ArrayList<byte[]>();
-			for (int i = 0; i < Constant.Block.MAX_TX; i++) {
+			for (int i = 0; i < oldTxList.size(); i++) {
 				if (i == index) {
 					continue;
 				}
-				if (txListOld == null) {
-					return;
-				}
-				addTransactionNotLock(txListOld[i]);
+				addTransactionNotLock(oldTxList.get(i));
 			}
 		}
 	}
@@ -133,7 +130,7 @@ public class Block implements Externalizable {
 	}
 
 	public Transaction[] getTxList() {
-		return txList;
+		return txList.toArray(new Transaction[txList.size()]);
 	}
 
 	public byte[] getTarget() {
@@ -174,17 +171,17 @@ public class Block implements Externalizable {
 	}
 
 	public void removeNull() {
-		List<Transaction> txListAsList = new ArrayList<Transaction>(Arrays.asList(txList));
-		txListAsList.removeAll(Collections.singleton(null));
-		txList = txListAsList.toArray(new Transaction[txListAsList.size()]);
+		txList.removeAll(Collections.singleton(null));
 	}
 
 	@Override
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		header = (BlockHeader) oi.readObject();
-		txList = new Transaction[header.getTxCnt()];
-		for (int i = 0; i < header.getTxCnt(); i++) {
-			txList[i] = (Transaction) oi.readObject();
+		int txCnt = oi.readInt();
+		header.setTxCnt(txCnt);
+		txList = new ArrayList<Transaction>();
+		for (int i = 0; i < txCnt; i++) {
+			txList.add((Transaction) oi.readObject());
 		}
 		// for(int i = 0; i < txCnt; i++) {
 		// byte[] data = new byte[oi.readInt()];
@@ -202,8 +199,10 @@ public class Block implements Externalizable {
 		// oo.writeInt(data.length);
 		// oo.write(data);
 		// }
-		for (int i = 0; i < txList.length; i++) {
-			oo.writeObject(txList[i]);
+		int txCnt = txList.size();
+		oo.writeInt(txCnt);
+		for (int i = 0; i < txCnt; i++) {
+			oo.writeObject(txList.get(i));
 		}
 	}
 
@@ -222,6 +221,6 @@ public class Block implements Externalizable {
 	}
 
 	public String toString() {
-		return "[header: " + header.toString() + ", txList: " + Arrays.asList(txList).toString() + "]";
+		return "[header: " + header.toString() + ", txList: " + txList + "]";
 	}
 }

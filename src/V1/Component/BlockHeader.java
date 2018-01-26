@@ -63,6 +63,9 @@ public class BlockHeader implements Externalizable {
 	int getTxCnt() {
 		return txCnt;
 	}
+	void setTxCnt(int txCnt) {
+		this.txCnt = txCnt;
+	}
 
 	void incrementTx() {
 		txCnt++;
@@ -79,9 +82,6 @@ public class BlockHeader implements Externalizable {
 	}
 	long getTimestamp() {
 		return timestamp;
-	}
-	void resetTxCnt() {
-		txCnt = 0;
 	}
 	
 	void nonceFound(byte[] nonce, byte[] miner, byte[] blockHash) {
@@ -114,7 +114,6 @@ public class BlockHeader implements Externalizable {
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		version = oi.readInt();
 		blockHeight = oi.readInt();
-		txCnt = oi.readInt();
 		int prevBlockHashLength = oi.readInt();
 		if(prevBlockHashLength > Constant.Block.BYTE_BLOCK_HASH) {
 			return;
@@ -170,7 +169,6 @@ public class BlockHeader implements Externalizable {
 	public void writeExternal(ObjectOutput oo) throws IOException {
 		oo.writeInt(version);
 		oo.writeInt(blockHeight);
-		oo.writeInt(txCnt);
 		oo.writeInt(prevBlockHash.length);
 		oo.write(prevBlockHash);
 		oo.writeLong(timestamp);

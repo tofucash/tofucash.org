@@ -84,7 +84,7 @@ public class Blockchain {
 	private static List<Long> blockTimeList;
 	private static Map<Integer, Block> blockchainTable;
 	private static boolean processing;
-	
+
 	// テストのためのフィールド
 	private static Map<Integer, Integer> testTxCntTable;
 	private static long timestamp0;
@@ -232,6 +232,9 @@ public class Blockchain {
 		Transaction tx;
 		for (int i = 0; i < txList.length; i++) {
 			tx = txList[i];
+			if(tx == null) {
+				 return true;
+			}
 			for (inputIt = Arrays.asList(tx.getIn()).iterator(); inputIt.hasNext();) {
 				Input in = inputIt.next();
 				if (in == null) {
@@ -254,10 +257,16 @@ public class Blockchain {
 	private static final Object GO_TO_NEXT_BLOCK_LOCK = new Object();
 
 	static boolean goToNextBlock(Block newBlock) {
+
 		if (newBlock == null) {
 			Log.log("[Blockchain.goToNextBlock()] newBlock null", Constant.Log.INVALID);
 			return false;
 		}
+		// if(getBlock(newBlock.getBlockHeight()) != null) {
+		// Log.log("[Blockchain.goToNextBlock()] TEST This blockHeight's block
+		// already exists: " +newBlock.getBlockHeight(), Constant.Log.STRONG);
+		// return false;
+		// }
 		Log.log("GO_TO_NEXT_BLOCK! 1: " + DatatypeConverter.printHexBinary(newBlock.getNonce()));
 		// if (processing) {
 		// return false;
@@ -402,11 +411,13 @@ public class Blockchain {
 			blockchainTable.put(newBlock.getBlockHeight(), newBlock);
 			testTxCntTable.put(newBlock.getBlockHeight(), newBlock.getTxCnt());
 			int txCntSum = 0;
-			for(Integer txCnt: testTxCntTable.values()) {
+			for (Integer txCnt : testTxCntTable.values()) {
 				txCntSum += txCnt;
 			}
-			Log.log("[Blockchain.goToNextBlock()] blockHeight: " + newBlock.getBlockHeight() +", txCntSum: " + txCntSum, Constant.Log.STRONG);
-			Log.log("[Blockchain.goToNextBlock()] timestampDiff: " + (newBlock.getTimestamp() - timestamp0), Constant.Log.STRONG);
+			Log.log("[Blockchain.goToNextBlock()] blockHeight: " + newBlock.getBlockHeight() + ", txCntSum: "
+					+ txCntSum, Constant.Log.STRONG);
+			Log.log("[Blockchain.goToNextBlock()] timestampDiff: " + (newBlock.getTimestamp() - timestamp0),
+					Constant.Log.STRONG);
 			byte[] miner = newBlock.getMiner();
 			byte[] nonce = newBlock.getNonce();
 			newBlock.resetNonce();
@@ -446,36 +457,34 @@ public class Blockchain {
 			currentBlockBackup = nextBlock;
 			byte[][] targetList = targetAdjust(blockHashBuf);
 			block.updateHeader(blockHash, targetList[0], targetList[1]);
-			nextBlock = new Block(block.getBlockHeight()+1);
+			nextBlock = new Block(block.getBlockHeight() + 1);
 
 			blockReward = Constant.Block.BLOCK_REWARD - block.getBlockHeight() / Constant.Block.BLOCK_REWARD_HALVING
 					* Constant.Block.BLOCK_REWARD_HALVING_SIZE;
 			blockSubReward = blockReward / Constant.Block.BLOCK_SUB_REWARD_RATE;
 			blockFrontendReward = blockReward / Constant.Block.BLOCK_FRONTEND_REWARD_RATE;
 		}
-		 NetworkObject retNo = new
-		 NetworkObject(Constant.NetworkObject.TYPE_UTXO_SPENT_HASH,
-		 null);
-		 List<UTXO> appendList = Blockchain.getUTXOLastList();
-		 UTXO utxo = new UTXO();
-		 for (UTXO tmp : appendList) {
-		 utxo.addAll(tmp.getAll());
-		 }
-		 List<Spent> removeList = Blockchain.getSpentLast();
-		 Spent spent = new Spent();
-		 for (Spent tmp : removeList) {
-		 spent.addAll(tmp.getAll());
-		 }
-		 retNo.setUtxoSpentHash(utxo, spent, utxoTableHash);
-		 Log.log("[Blockchain.gotoNextBlock()] Broadcast utxoTableUpdate COMPONENTS");
-		 BackendServer.shareFrontend(retNo);
-		 BackendServer.shareBackend(new
-		 NetworkObject(Constant.NetworkObject.TYPE_BLOCK_BROADCAST,
-		 newBlock));
-
-//		BackendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_UTXO, utxoTable));
-//		Log.log("[Blockchain.gotoNextBlock()] Broadcast utxoTableUpdate ALL");
 		DataManager.updateMining(block);
+		NetworkObject retNo = new NetworkObject(Constant.NetworkObject.TYPE_UTXO_SPENT_HASH, null);
+		List<UTXO> appendList = Blockchain.getUTXOLastList();
+		UTXO utxo = new UTXO();
+		for (UTXO tmp : appendList) {
+			utxo.addAll(tmp.getAll());
+		}
+		List<Spent> removeList = Blockchain.getSpentLast();
+		Spent spent = new Spent();
+		for (Spent tmp : removeList) {
+			spent.addAll(tmp.getAll());
+		}
+		retNo.setUtxoSpentHash(utxo, spent, utxoTableHash);
+		Log.log("[Blockchain.gotoNextBlock()] Broadcast utxoTableUpdate COMPONENTS");
+		BackendServer.shareFrontend(retNo);
+		BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_BROADCAST, newBlock));
+
+		// BackendServer.shareFrontend(new
+		// NetworkObject(Constant.NetworkObject.TYPE_UTXO, utxoTable));
+		// Log.log("[Blockchain.gotoNextBlock()] Broadcast utxoTableUpdate
+		// ALL");
 		return true;
 	}
 
@@ -529,19 +538,20 @@ public class Blockchain {
 		tx = new Transaction(in, out, Constant.Transaction.VERSION, Constant.Blockchain.CONFIRMATION,
 				DatatypeConverter.parseHexBinary(report.getSignature()),
 				DatatypeConverter.parseHexBinary(report.getPublicKey()));
-		// nextBlock.addTransaction(tx);
+//		nextBlock.addTransaction(tx);
+//		BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_TX_REWARD, tx));
 		if (result == Constant.Verify.Result.TARGET) {
 			block.nonceFound(DatatypeConverter.parseHexBinary(report.getNonce()),
 					DatatypeConverter.parseHexBinary(report.getCAddress()),
 					DatatypeConverter.parseHexBinary(report.getResult()));
-			if (verifyBlock(block, new Spent())) {
+//			if (verifyBlock(block, new Spent())) {
 				Log.log("[Blockchain.addRewardTransaction()] Mined and Broadcast!", Constant.Log.TEMPORARY);
 				BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK, block));
-			} else {
-				Log.log("[Blockchain.addRewardTransaction()] verifyBlock false and reset", Constant.Log.INVALID);
-				Log.log("current work: " + DataManager.getWork());
-				DataManager.updateMining(block);
-			}
+//			} else {
+//				Log.log("[Blockchain.addRewardTransaction()] verifyBlock false and reset", Constant.Log.INVALID);
+//				Log.log("current work: " + DataManager.getWork());
+//				DataManager.updateMining(block);
+//			}
 		}
 	}
 
@@ -556,6 +566,9 @@ public class Blockchain {
 		}
 		return true;
 	}
+	static Block getNextBlock() {
+		return nextBlock;
+	}
 
 	static Output checkTxInput(Input in, Transaction tx, List<Input> unavailableInputList, Spent utxoTableRemove1,
 			Spent utxoTableRemove2, byte[] prevBlockHash) {
@@ -566,7 +579,8 @@ public class Blockchain {
 				// このアドレスはブロックですでに消費したUTXOが一つ以上ある
 				if (utxoMapUpdate.contains(ByteBuffer.wrap(in.getOutHash()))) {
 					// このUTXOは使用済み
-					Log.log("[Blockchain.checkTxInput()] UTXO already used at current: " + DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
+					Log.log("[Blockchain.checkTxInput()] UTXO already used at current: "
+							+ DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
 					return null;
 				}
 			}
@@ -577,7 +591,8 @@ public class Blockchain {
 				// このアドレスは次のブロックですでに消費したUTXOが一つ以上ある
 				if (utxoMapUpdate.contains(ByteBuffer.wrap(in.getOutHash()))) {
 					// このUTXOは使用済み
-					Log.log("[Blockchain.checkTxInput()] UTXO already used at next: " + DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
+					Log.log("[Blockchain.checkTxInput()] UTXO already used at next: "
+							+ DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
 					return null;
 				}
 			}
@@ -625,13 +640,15 @@ public class Blockchain {
 		}
 		Map<ByteBuffer, Output> utxoMap = utxoTable.get(ByteBuffer.wrap(in.getReceiver()));
 		if (utxoMap == null) {
-			Log.log("[Blockchain.checkTxInput()] Receiver not exists: " + DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
+			Log.log("[Blockchain.checkTxInput()] Receiver not exists: "
+					+ DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
 			return null;
 		}
 
 		Output out = utxoMap.get(ByteBuffer.wrap(outHash));
 		if (out == null) {
-			Log.log("[Blockchain.checkTxInput()] outHash not exists: " + DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
+			Log.log("[Blockchain.checkTxInput()] outHash not exists: "
+					+ DatatypeConverter.printHexBinary(in.getOutHash()), Constant.Log.INVALID);
 			return null;
 		}
 
@@ -684,8 +701,8 @@ public class Blockchain {
 		IO.moveFile(
 				Setting.BLOCKCHAIN_BIN_DIR + Constant.Blockchain.BLOCKCHAIN_TMP_DIR + newBlock.getBlockHeight() + "_"
 						+ DatatypeConverter.printHexBinary(blockHashBuf.array()),
-				Setting.BLOCKCHAIN_BIN_DIR + (block.getBlockHeight() / Constant.Blockchain.SAVE_FILE_PER_DIR) + File.separator
-						+ newBlock.getBlockHeight());
+				Setting.BLOCKCHAIN_BIN_DIR + (block.getBlockHeight() / Constant.Blockchain.SAVE_FILE_PER_DIR)
+						+ File.separator + newBlock.getBlockHeight());
 		return true;
 	}
 
@@ -781,9 +798,12 @@ public class Blockchain {
 				KeyAddressSet keyAddressSet = JSON.decode(IO.fileReadAll(dirName + j + ".json"), KeyAddressSet.class);
 				for (int k = 0; k < Constant.Test.ACCOUNT_NUM; k++) {
 					receiver = DatatypeConverter.parseHexBinary(keyAddressSet.address[k]);
-//					utxoTable.add(receiver, new Output(505, new Question(script, receiver)), new byte[1]);
-//					utxoTable.add(receiver, new Output(505, new Question(script, receiver)), new byte[2]);
-//					utxoTable.add(receiver, new Output(505, new Question(script, receiver)), new byte[3]);
+					// utxoTable.add(receiver, new Output(505, new
+					// Question(script, receiver)), new byte[1]);
+					// utxoTable.add(receiver, new Output(505, new
+					// Question(script, receiver)), new byte[2]);
+					// utxoTable.add(receiver, new Output(505, new
+					// Question(script, receiver)), new byte[3]);
 					utxoTable.add(receiver, new Output(101, new Question(script, receiver)), new byte[1]);
 					utxoTable.add(receiver, new Output(101, new Question(script, receiver)), new byte[2]);
 					utxoTable.add(receiver, new Output(101, new Question(script, receiver)), new byte[3]);

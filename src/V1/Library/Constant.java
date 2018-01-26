@@ -130,8 +130,9 @@ public class Constant {
 		public static final int TYPE_BLOCK_BROADCAST = 110;
 		public static final int TYPE_BLOCK_CHECK = 120;
 		
-		public static final int TYPE_TX = 20;
+		public static final int TYPE_TX = 200;
 		public static final int TYPE_TX_BROADCAST = 210;
+		public static final int TYPE_TX_REWARD = 220;
 		
 		public static final int TYPE_NODE = 300;
 		public static final int TYPE_NODE_BROADCAST = 310;

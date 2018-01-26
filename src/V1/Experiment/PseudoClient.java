@@ -34,8 +34,8 @@ public class PseudoClient extends Thread {
 	final private static int MAX_TRIAL = 60;
 	final private static int EACH_SEND_AMOUNT = 100;
 	final private static int INTERVAL1 = 2000;
-	final private static int INTERVAL_PLUS_MAX = 1000;
-	final private static int INTERVAL2 = 500;
+	final private static int INTERVAL_PLUS_MAX = 2000;
+	final private static int INTERVAL2 = 2000;
 	final private static int CLIENT_NUM = 10;
 	final private static int UTXO_SPLID = 3;
 	// final private static int CLIENT_NUM = Constant.Test.CLIENT_NUM;
@@ -48,14 +48,14 @@ public class PseudoClient extends Thread {
 	public static void main(String[] args) {
 		// n.jspnの数
 		// int pseudoClientNum = 1;
+		if (args.length > 0) {
+			NODE_ID = Integer.parseInt(args[0]);
+		}
 		String keyAddressSetFileDir = System.getProperty("user.dir") + File.separator + ".." + File.separator + "data"
 				+ File.separator + Constant.Test.EXP_DIR + File.separator + NODE_ID + File.separator;
 		// String keyAddressSetFileDir = System.getProperty("user.dir") +
 		// File.separator + "data" + File.separator
 		// + Constant.Test.EXP_DIR + File.separator + NODE_ID + File.separator;
-		if (args.length > 0) {
-			NODE_ID = Integer.parseInt(args[0]);
-		}
 		init();
 		Log.log("MAX_TRIAL: " + MAX_TRIAL);
 		Log.log("NODE_ID: " + NODE_ID);
@@ -152,7 +152,7 @@ public class PseudoClient extends Thread {
 	}
 
 	public void run() {
-		Random rnd = new Random(123);
+		Random rnd = new Random(clientId);
 		List<List<String>> utxoLastUsedList = new ArrayList<List<String>>();
 		for (int i = 0; i < Constant.Test.ACCOUNT_NUM; i++) {
 			utxoLastUsedList.add(new ArrayList<String>());

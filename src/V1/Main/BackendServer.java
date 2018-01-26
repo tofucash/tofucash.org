@@ -218,6 +218,13 @@ public class BackendServer extends Thread {
 			// 新しいトランザクションが送られてきた
 			Blockchain.addTransaction(no.getTx());
 			return;
+		} else if(no.getType() == Constant.NetworkObject.TYPE_TX_REWARD) {
+			
+			// TODO 正しいtxかどうか検証する必要がある
+			
+			// coinbaseを追加する
+			Blockchain.getNextBlock().addTransaction(no.getTx());
+			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK) {
 			// マイニング成功した新しいブロックが送られてきた
 			try {

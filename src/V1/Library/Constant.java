@@ -11,9 +11,12 @@ public class Constant {
 	
 	private Constant() {
 	}
-
-	public static final int TEST_NETWORK = 1;
-	public static final int PRODUCT_NETWORK = 2;
+	public static class Test {
+		public static final int NODE_NUM = 10;
+		public static final int CLIENT_NUM = 10;
+		public static final int ACCOUNT_NUM = 10;
+		public static final String EXP_DIR = "experiment20180126";
+	}
 
 	public static class Address {
 		private Address() {
@@ -33,7 +36,7 @@ public class Constant {
 		}
 
 		public static final int VERSION = 1;
-		public static final int MAX_TX_POWER = 8;
+		public static final int MAX_TX_POWER = 10;
 		public static final int MAX_TX = (int) Math.pow(2, MAX_TX_POWER);
 		public static final int BYTE_BLOCK_HASH = 64;
 		public static final int BYTE_NONCE = 64;
@@ -55,6 +58,8 @@ public class Constant {
 		private Blockchain() {
 		}
 		
+		public static final int LENGTH_UTXO_CACHE = 3;
+		
 		public static final int SAVE_FILE_PER_DIR = 1000;
 		public static final int BYTE_BLOCK_HASH = Block.BYTE_BLOCK_HASH;
 		public static final int TX_FEE = 1;
@@ -66,13 +71,13 @@ public class Constant {
 		public static final int TX_BROADCAST_DATA = NetworkObject.TYPE_TX_BROADCAST;
 		public static final int NODE_BROADCAST_DATA = NetworkObject.TYPE_NODE_BROADCAST;
 		
-		public static final int CONFIRMATION = 3;
+		public static final int CONFIRMATION = 6;
 		public static final int DIFFICULTY_ADJUST_BLOCK = 10;
 		public static final int LENGTH_MAX_BLOCK_TIME_LIST = DIFFICULTY_ADJUST_BLOCK - CONFIRMATION - 1;
 		public static final int AVERAGE_BLOCK_TIME = 30;
 		public static final int TARGET_SHIFT_PER_TIME = 4;	// shift per 4s per block 
 
-		public static final int NODE_PBFT_RATE = 3; 
+		public static final double NODE_PBFT_RATE = 2 / 3; 
 		
 		public static final String BLOCKCHAIN_TMP_DIR = "tmp"+File.separator;
 		
@@ -103,8 +108,8 @@ public class Constant {
 		public static final int BYTE_BUF = 1024;
 	}
 	public static class Manager {
-		public static final int REQUEST_NOTIFIER_INTERVAL = 3000;
-		public static final int UPDATE_CHECKER_INTERVAL = 3000;
+		public static final int REQUEST_NOTIFIER_INTERVAL = 1000;
+		public static final int UPDATE_CHECKER_INTERVAL = 1000;
 	}
 	public static class MerkleTree {
 		private MerkleTree() {
@@ -125,7 +130,7 @@ public class Constant {
 		public static final int TYPE_BLOCK_BROADCAST = 110;
 		public static final int TYPE_BLOCK_CHECK = 120;
 		
-		public static final int TYPE_TX = 200;
+		public static final int TYPE_TX = 20;
 		public static final int TYPE_TX_BROADCAST = 210;
 		
 		public static final int TYPE_NODE = 300;
@@ -142,6 +147,8 @@ public class Constant {
 		
 		public static final int TYPE_UTXO = 900;
 		public static final int TYPE_UTXO_CHECK = 910;
+		public static final int TYPE_UTXO_SPENT_HASH = 920;
+		public static final int TYPE_UTXO_BYTE = 930;
 		
 		public static final int TYPE_SPENT = 1000;
 
@@ -149,6 +156,9 @@ public class Constant {
 		
 		public static final int TYPE_ROUTINE = 1200;
 		public static final int TYPE_ROUTINE_REVOKE = 1200;
+		
+		public static final int VALUE_ALL = -1;
+		public static final int VALUE_DIFF = 0;
 		
 		public static final int BYTE_MAX_HASH = 64;
 		public static final int BYTE_MAX_NONCE = 64;
@@ -192,6 +202,8 @@ public class Constant {
 	public static class Server {
 		private Server() {
 		}
+		public static final int TEST_NETWORK = 1;
+		public static final int PRODUCT_NETWORK = 2;
 
 		public static final int SERVER_READ_SLEEP = 1000;
 		public static final int SERVER_PORT = 45910;
@@ -202,6 +214,7 @@ public class Constant {
 		public static final int MAX_ACCESS_PER_DAY = 10;
 		public static final int NONCE_CNT = 300;
 		public static final String HASH_ALGO = "sha512";
+		public static final int TIMEOUT = 2000;
 	}
 	public static class Stack {
 		private Stack() {}
@@ -238,8 +251,13 @@ public class Constant {
 		public static final String TEMPORARY = "\u001b[00;47m \u001b[00;33m";
 		public static final String EXCEPTION = "\u001b[00;41m \u001b[00;31m";
 		public static final String INVALID = "\u001b[00;45m \u001b[00;35m";
+		public static final String STRONG = "\u001b[00;42m \u001b[00;32m";
 	}
-	
+	public static class Output {
+		private Output() {
+		}
+		public static final int BYTE_ANSWER_SCRIPT_HASH = 64;
+	}
 	public static class Verify {
 		public enum Result {
 			TARGET, SUB_TARGET, FAIL 

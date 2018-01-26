@@ -80,6 +80,9 @@ public class BlockHeader implements Externalizable {
 	long getTimestamp() {
 		return timestamp;
 	}
+	void resetTxCnt() {
+		txCnt = 0;
+	}
 	
 	void nonceFound(byte[] nonce, byte[] miner, byte[] blockHash) {
 		this.nonce = nonce;
@@ -186,7 +189,7 @@ public class BlockHeader implements Externalizable {
 	}
 
 	public String toString() {
-		return "[version: " + version + ", blockHeight: "+blockHeight + ", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
+		return "[version: " + version + ", blockHeight: "+blockHeight + ", txCnt: "+txCnt+", prevBlockHash: " + DatatypeConverter.printHexBinary(prevBlockHash)
 		 + ", target: " + DatatypeConverter.printHexBinary(target) + ", subTarget: " + DatatypeConverter.printHexBinary(subTarget)
 				+ ", timestamp: " + timestamp + ", miner: "
 				+ DatatypeConverter.printHexBinary(miner) + ", nonce: " + DatatypeConverter.printHexBinary(nonce)

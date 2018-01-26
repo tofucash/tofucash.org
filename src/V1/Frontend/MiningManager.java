@@ -15,6 +15,7 @@ import V1.Component.NetworkObject;
 import V1.Component.Report;
 import V1.Component.Work;
 import V1.Library.Base58;
+import V1.Library.ByteUtil;
 import V1.Library.Constant;
 import V1.Library.Crypto;
 import V1.Library.Log;
@@ -23,11 +24,13 @@ import V1.Library.Constant.Verify.Result;
 import V1.Library.TofuError;
 import net.arnx.jsonic.web.WebServiceServlet.JSON;
 
-public class MiningManager {
+public class MiningManager extends Thread {
 	private static Work work;
 	private static Map<ByteBuffer, List<Report>> reportMap;
 	private static List<byte[]> nonceList;
 	private static Map<String, byte[]> ipNonceMap;
+	private static boolean workUpdated;
+
 	static void init() {
 		byte[] decoy = new byte[Constant.Block.BYTE_BLOCK_HASH];
 		byte[] target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
@@ -38,6 +41,7 @@ public class MiningManager {
 		nonceList = new ArrayList<byte[]>();
 		nonceList.add(new byte[Constant.Block.BYTE_NONCE]);
 		ipNonceMap = new HashMap<String, byte[]>();
+		workUpdated = false;
 		Log.log("MiningManager init done.");
 	}
 
@@ -47,17 +51,22 @@ public class MiningManager {
 		nonceList.clear();
 		ipNonceMap.clear();
 		// nonceListを埋める
-		for(int i = 0; i < Constant.Mining.MAX_CLIENT_NODE; i++) {
-			nonceList.add(Crypto.hash512(DatatypeConverter.parseHexBinary(DatatypeConverter.printHexBinary(work.getHash()) + String.format("%04d", i) + DatatypeConverter.printHexBinary(Setting.getByteAddress()))));
+		workUpdated = true;
+		for (int i = 0; i < Constant.Mining.MAX_CLIENT_NODE; i++) {
+			nonceList.add(
+					Crypto.hash512(DatatypeConverter.parseHexBinary(DatatypeConverter.printHexBinary(work.getHash())
+							+ String.format("%04d", i) + DatatypeConverter.printHexBinary(Setting.getByteAddress()))));
 		}
-		Log.log("[MiningManager.receptWork()] work update: " + work);
+		Log.log("[MiningManager.receptWork()] work update");
+//		Log.log("[MiningManager.receptWork()] work update: " + work);
 	}
 
 	static Work getWork() {
 		return work;
 	}
+
 	static byte[] getNextNonce(String ipAddress) {
-		if(!nonceList.isEmpty()) {
+		if (!nonceList.isEmpty()) {
 			byte[] nonce = nonceList.remove(0);
 			ipNonceMap.put(ipAddress, nonce);
 			Log.log("ip: " + ipAddress + "\t nonce: " + DatatypeConverter.printHexBinary(nonce));
@@ -71,63 +80,102 @@ public class MiningManager {
 		// Reportオブジェクトか判定
 		Report report = null;
 		try {
-			report =  (Report) JSON.decode(json, Report.class);
-			Log.log("[MiningManager.verifyMining()] report: " + report, Constant.Log.TEMPORARY);
+			report = (Report) JSON.decode(json, Report.class);
+//			Log.log("[MiningManager.verifyMining()] report: " + report, Constant.Log.TEMPORARY);
 		} catch (Exception e) {
 			Log.log("[MiningManager.verifyMining()] Not Answer JSON");
 			e.printStackTrace();
 			return null;
 		}
-		if(report == null || report.getHash() == null) {
+		if (report == null || report.getHash() == null) {
 			return null;
 		}
 		// 自分のF層アドレスが含まれているか確認
-		if(report.getFAddress() != null &&!ByteBuffer.wrap(DatatypeConverter.parseHexBinary(report.getFAddress())).equals(ByteBuffer.wrap(Setting.getByteAddress()))) {
+		if (report.getFAddress() != null && !ByteBuffer.wrap(DatatypeConverter.parseHexBinary(report.getFAddress()))
+				.equals(ByteBuffer.wrap(Setting.getByteAddress()))) {
 			return null;
 		}
 		// nonceが与えた範囲に収まっているか確認
-		if(!ipNonceMap.containsKey(ipAddress)) {
-			Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
-			return null;
-		}
-		BigInteger tmp = new BigInteger(ipNonceMap.get(ipAddress));
-		BigInteger nonceNum = new BigInteger(DatatypeConverter.parseHexBinary(report.getNonce()));
-		if(nonceNum.compareTo(tmp) > 0) {
-			tmp = tmp.add(BigInteger.valueOf(Constant.Server.NONCE_CNT));
-			if(nonceNum.compareTo(tmp) > 0) {
-				Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
-				return null;
-			}
-		} else {
-			Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
-			return null;
-		}
+//		if (!ipNonceMap.containsKey(ipAddress)) {
+//			Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
+//			return null;
+//		}
+//		BigInteger tmp = new BigInteger(ipNonceMap.get(ipAddress));
+//		BigInteger nonceNum = new BigInteger(DatatypeConverter.parseHexBinary(report.getNonce()));
+//		Log.log("start: " + tmp.toString());
+//		Log.log("nonce: " + nonceNum.toString());
+//		if (nonceNum.compareTo(tmp) > 0) {
+//			tmp = tmp.add(BigInteger.valueOf(Constant.Server.NONCE_CNT));
+//			if (nonceNum.compareTo(tmp) > 0) {
+//				Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
+//				return null;
+//			}
+//		} else {
+//			Log.log("[MiningManager.verifyMining()] Invalid Nonce", Constant.Log.INVALID);
+//			return null;
+//		}
 		// Reportが正しいか確認
 		Result result;
-		if((result = Verify.verifyMining(work, report)) == Result.FAIL) {
+		if ((result = Verify.verifyMining(work, report)) == Result.FAIL) {
 			return null;
 		} else {
 			return report;
 		}
-		
+
 		// 以下 他ノードにハッシュをチェックしてもらう処理
-//		// すでに見つかったnonceか確認
-//		// そうでなければworkをこのrequestのnonceに変更してResult.CHECKをreturn
-//		ByteBuffer buf = ByteBuffer.wrap(work.getHash());
-//		if(reportMap.containsKey(buf)) {
-//			List<Report> list = reportMap.get(buf);
-//			for(Report tmp: list) {
-//				if(tmp.getNonce() == report.getNonce() && tmp.getHash() == report.getHash() && tmp.getCAddress() != report.getCAddress()) {
-//					return Result.TARGET;
-//				}
-//			}
-//		} else {
-//			List<Report> list = new ArrayList<Report>();;
-//			list.add(report);
-//			reportMap.put(buf, list);
-//		}
-//		for(int i = 0; i < Constant.Mining.NONCE_CHECK_NODE; i++) {
-//			nonceList.add(DatatypeConverter.parseHexBinary(report.getNonce()));
-//		}		
+		// // すでに見つかったnonceか確認
+		// // そうでなければworkをこのrequestのnonceに変更してResult.CHECKをreturn
+		// ByteBuffer buf = ByteBuffer.wrap(work.getHash());
+		// if(reportMap.containsKey(buf)) {
+		// List<Report> list = reportMap.get(buf);
+		// for(Report tmp: list) {
+		// if(tmp.getNonce() == report.getNonce() && tmp.getHash() ==
+		// report.getHash() && tmp.getCAddress() != report.getCAddress()) {
+		// return Result.TARGET;
+		// }
+		// }
+		// } else {
+		// List<Report> list = new ArrayList<Report>();;
+		// list.add(report);
+		// reportMap.put(buf, list);
+		// }
+		// for(int i = 0; i < Constant.Mining.NONCE_CHECK_NODE; i++) {
+		// nonceList.add(DatatypeConverter.parseHexBinary(report.getNonce()));
+		// }
 	}
+
+	public void run() {
+		new UpdateChecker().start();
+	}
+
+	class UpdateChecker extends Thread {
+		public void run() {
+			byte[] last = new byte[1];
+			byte[] current;
+			try {
+				while (true) {
+					Thread.sleep(Constant.Manager.UPDATE_CHECKER_INTERVAL);
+					current = ByteUtil.getByteObject(MiningManager.getWork());
+					// checkUpdate();
+					if (workUpdated) {
+						last = ByteUtil.getByteObject(MiningManager.getWork());						
+						workUpdated = false;
+						continue;
+					}
+					if (!Arrays.equals(current, last)) {
+						checkUpdate();
+					}
+					last = current;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		private void checkUpdate() throws Exception {
+			FrontendServer
+					.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_WORK_CHECK, MiningManager.getWork()));
+		}
+	}
+
 }

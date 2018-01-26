@@ -26,12 +26,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.regex.Pattern;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 import javax.xml.bind.DatatypeConverter;
 
 import V1.Component.Block;
 import V1.Component.NetworkObject;
 import V1.Component.Node;
+import V1.Component.UTXO;
 import V1.Component.Work;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
@@ -43,24 +46,28 @@ public class FrontendServer extends Thread {
 	private static List<byte[]> receptDataHashList;
 	private static Map<String, Node> backendTable;
 	private static Map<String, Node> frontendTable;
+	private static Map<String, Node> backendTableTrusted;
+	private static Map<String, Node> frontendTableTrusted;
 	private static List<String> blacklist;
 
 	static void init() throws Exception {
 		receptDataHashList = new ArrayList<byte[]>();
-
 		backendTable = new HashMap<String, Node>();
 		frontendTable = new HashMap<String, Node>();
+		backendTableTrusted = new HashMap<String, Node>();
+		frontendTableTrusted = new HashMap<String, Node>();
 		blacklist = new ArrayList<String>();
 		Node tmp;
 		for (File file : new File(Setting.TRUSTED_BACKEND_DIR).listFiles()) {
 			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_BACKEND_DIR + file.getName()));
 			backendTable.put(tmp.getIp(), tmp);
+			backendTableTrusted.put(tmp.getIp(), tmp);
 		}
 		for (File file : new File(Setting.TRUSTED_FRONTEND_DIR).listFiles()) {
 			tmp = (Node) ByteUtil.convertByteToObject(IO.readFileToByte(Setting.TRUSTED_FRONTEND_DIR + file.getName()));
 			frontendTable.put(tmp.getIp(), tmp);
+			frontendTableTrusted.put(tmp.getIp(), tmp);
 		}
-
 		Log.log("Server init done.");
 	}
 
@@ -68,6 +75,12 @@ public class FrontendServer extends Thread {
 		try {
 			ServerSocket ss = new ServerSocket(Constant.Server.SERVER_PORT);
 			Log.log("FrontendServer.init()] ready: port[ " + Constant.Server.SERVER_PORT + " ]");
+			Log.log("Initial UTXO/Block request");
+			inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_UTXO_CHECK, Constant.NetworkObject.VALUE_ALL));
+			inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_WORK_CHECK, MiningManager.getWork()));
+			Log.log("Inquiry: TYPE_UTXO_CHECK");
+//			inquiryBackend(
+//					new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_CHECK, Constant.NetworkObject.VALUE_ALL));
 
 			while (true) {
 				try {
@@ -76,7 +89,15 @@ public class FrontendServer extends Thread {
 					if (blacklist.contains(remoteIp)) {
 						Log.log("[Blacklist node] access denied not trusted ip [" + remoteIp + "]");
 						soc.close();
-					} else if (backendTable.containsKey(remoteIp) || frontendTable.containsKey(remoteIp)) {
+					} else if (backendTableTrusted.containsKey(remoteIp)) {
+						if (!backendTable.containsKey(remoteIp)) {
+							backendTable.put(remoteIp, backendTableTrusted.get(remoteIp));
+						}
+						new Client(soc, remoteIp).start();
+					} else if (frontendTableTrusted.containsKey(remoteIp)) {
+						if (!frontendTable.containsKey(remoteIp)) {
+							frontendTable.put(remoteIp, frontendTableTrusted.get(remoteIp));
+						}
 						new Client(soc, remoteIp).start();
 					} else {
 						Log.log("[Unknown node] access denied not trusted ip [" + remoteIp + "]");
@@ -119,7 +140,7 @@ public class FrontendServer extends Thread {
 						is = soc.getInputStream();
 						isr = new InputStreamReader(is);
 						baos = new ByteArrayOutputStream();
-						byte[] buffer = new byte[4098];
+						byte[] buffer = new byte[Constant.Server.SERVER_BUF];
 						int readBytes = -1;
 						byte[] data;
 						int available = is.available();
@@ -174,25 +195,26 @@ public class FrontendServer extends Thread {
 			return;
 		}
 
-		Log.log("[BackendServer.receptNetworkObject()] ip: "+remoteIp+", no: " + no, Constant.Log.TEMPORARY);
-		Log.log("[BackendServer.receptNetworkObject()] AlreadyReceptRejectMode off");
-//		try {
-//			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
-//			if (ByteUtil.contains(receptDataHashList, hash)) {
-//				Log.log("[FrontendServer.receptNetworkObject()] Already recept: "
-//						+ DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
-//				return;
-//			} else {
-//				receptDataHashList.add(hash);
-//				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
-//					receptDataHashList.remove(0);
-//				}
-//			}
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			Log.log("[FrontendServer.receptNetworkObject()] Invalid NetworkObject: ", Constant.Log.EXCEPTION);
-//			return;
-//		}
+		Log.log("[BackendServer.receptNetworkObject()] ip: " + remoteIp, Constant.Log.TEMPORARY);
+		// try {
+		// byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
+		// if (ByteUtil.contains(receptDataHashList, hash)) {
+		// Log.log("[FrontendServer.receptNetworkObject()] Already recept: "
+		// + DatatypeConverter.printHexBinary(hash), Constant.Log.TEMPORARY);
+		// return;
+		// } else {
+		// receptDataHashList.add(hash);
+		// if (receptDataHashList.size() >
+		// Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
+		// receptDataHashList.remove(0);
+		// }
+		// }
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// Log.log("[FrontendServer.receptNetworkObject()] Invalid
+		// NetworkObject: ", Constant.Log.EXCEPTION);
+		// return;
+		// }
 
 		if (no.getType() == Constant.NetworkObject.TYPE_TX
 				|| no.getType() == Constant.NetworkObject.TYPE_TX_BROADCAST) {
@@ -213,15 +235,43 @@ public class FrontendServer extends Thread {
 			// workが変わっていればアップデートし、utxoとブロックデータをアップデートする
 			if (no.getWork() != MiningManager.getWork()) {
 				MiningManager.receptWork(no);
-				FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_UTXO_CHECK, -1));
-				FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_CHECK, -1));
+//				FrontendServer.inquiryBackend(
+//						new NetworkObject(Constant.NetworkObject.TYPE_UTXO_CHECK, Constant.NetworkObject.VALUE_DIFF));
+//				FrontendServer.inquiryBackend(
+//						new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_CHECK, Constant.NetworkObject.VALUE_ALL));
 			}
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_UTXO) {
-			DataManager.addUTXO(no.getUTXO());
+			Log.log("[FrontendServer.receptNetworkObject()] WHOLE UTXO RECEPT!", Constant.Log.STRONG);
+			DataManager.overwriteUTXO(no.getUTXO());
 			return;
-		} else if (no.getType() == Constant.NetworkObject.TYPE_SPENT) {
-			DataManager.addUTXORemove(no.getSpent());
+		} else if (no.getType() == Constant.NetworkObject.TYPE_UTXO_SPENT_HASH) {
+			Log.log("[FrontendServer.receptNetworkObject()] UTXO_SPENT_HASH RECEPT!", Constant.Log.STRONG);
+			DataManager.updateUTXO(no.getUTXO(), no.getSpent());
+//			if (!DataManager.checkUTXOHash(no.getHash())) {
+//				FrontendServer.inquiryBackend(
+//						new NetworkObject(Constant.NetworkObject.TYPE_UTXO_CHECK, Constant.NetworkObject.VALUE_ALL));
+//			}
+			return;
+		} else if (no.getType() == Constant.NetworkObject.TYPE_UTXO_BYTE) {
+			try {
+				Inflater decompresser = new Inflater();
+				decompresser.setInput(no.getHash(), 0, no.getHash().length);
+				byte[] result = new byte[no.getBlockHeight()];
+				int resultLength = decompresser.inflate(result);
+				Log.log("resultLength: " + resultLength);
+				Log.log("data: " + DatatypeConverter.printHexBinary(result).substring(0, 20));
+				decompresser.end();
+				DataManager.overwriteUTXO((UTXO) ByteUtil.convertByteToObject(result));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			// Decode the bytes into a String
+
+			// } else if (no.getType() == Constant.NetworkObject.TYPE_SPENT) {
+			// DataManager.addUTXORemove(no.getSpent());
+			// return;
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_ROUTINE
 				|| no.getType() == Constant.NetworkObject.TYPE_ROUTINE_REVOKE) {
@@ -243,8 +293,13 @@ public class FrontendServer extends Thread {
 		}
 		node = it.next().getValue();
 		char[] ret = access(no, node);
-		if(ret == null) {
-			Log.log("[FrontendServer] Access another node");
+		if (ret == null) {
+//			it.remove();
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 			inquiryBackend(no);
 		}
 	}
@@ -254,11 +309,11 @@ public class FrontendServer extends Thread {
 			Log.log("BROADCAST_BACKEND false");
 			return;
 		}
-		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
-		for (Iterator<Node> it = backendTable.values().iterator(); it.hasNext(); ) {
-			if(access(no, it.next()) == null) {
+//		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
+		for (Iterator<Node> it = backendTable.values().iterator(); it.hasNext();) {
+			if (access(no, it.next()) == null) {
 				Log.log("[share--end] 3count after remove");
-//				it.remove();
+				// it.remove();
 			}
 		}
 	}
@@ -269,11 +324,11 @@ public class FrontendServer extends Thread {
 			Log.log("BROADCAST_FRONTEND false");
 			return;
 		}
-		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
-		for (Iterator<Node> it = frontendTable.values().iterator(); it.hasNext(); ) {
-			if(access(no, it.next()) == null) {
+//		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
+		for (Iterator<Node> it = frontendTable.values().iterator(); it.hasNext();) {
+			if (access(no, it.next()) == null) {
 				Log.log("[share--end] 3count after remove");
-//				it.remove();
+				// it.remove();
 			}
 		}
 	}
@@ -284,7 +339,8 @@ public class FrontendServer extends Thread {
 
 		try {
 			InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
-			socket.connect(socketAddress, 30000);
+			socket.connect(socketAddress, Constant.Server.TIMEOUT);
+			socket.setSoTimeout(Constant.Server.TIMEOUT);
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			ObjectOutputStream oos = null;
@@ -307,12 +363,13 @@ public class FrontendServer extends Thread {
 			InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
 			BufferedReader br1 = new BufferedReader(ir1);
 
-			while (is1.available() == 0)
-				;
-
-			char[] cline = new char[is1.available()];
-			br1.read(cline);
-			Log.log("[FrontendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+//			while (is1.available() == 0)
+//				;
+//
+//			char[] cline = new char[is1.available()];
+//			br1.read(cline);
+//			Log.log("[FrontendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+//			Log.log("[FrontendServer.broadcast()] connect: " + node, Constant.Log.TEMPORARY);
 
 			baos.close();
 			oos.close();
@@ -321,9 +378,9 @@ public class FrontendServer extends Thread {
 			br1.close();
 			is1.close();
 			socket.close();
-			return cline;
+			return new char[1];
 		} catch (Exception e) {
-			e.printStackTrace();
+//			e.printStackTrace();
 			Log.log("[FrontendServer.broadcast()] Cannot connection and detach: " + node.getIp() + ":" + node.getPort(),
 					Constant.Log.IMPORTANT);
 			return null;

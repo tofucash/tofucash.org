@@ -25,7 +25,7 @@ public class Setting {
 			+ "data" + File.separator + "backendServer" + File.separator;
 
 	static final boolean BROADCAST_FRONTEND = true;
-	static final boolean BROADCAST_BACKEND = false;
+	static final boolean BROADCAST_BACKEND = true;
 	private static final String address = "8C4uHzpdVq5ZmCZxBWdbNt3L91pfEqxwS8AHsVwEMEnE552oyTz8YpwSvdZFuWQ2mTjLCjcH15Zjd9yttDMtNxBvE2ToZFcmrejx2TwbRrgyexJEtUX43E6T5dGh2xSk9vD4fG8f2RGMEARxiAq823ZmsKu8j8trDVFYpJmZfwx2ijS";
 	private static final String privateKey = "63CF6591947F69D40E7E3ABCE6FCE7466B0339A6B03C248346A07C489938A906";
 	private static final String publicKey = "0413433316B2BD3B861B509DAB0C99F6867391E72ADB29693ED6168ECC2873F21E15944C8FC970F0E9582382CA0DC991460C01E4297CC921382A5FF21D4E933413";

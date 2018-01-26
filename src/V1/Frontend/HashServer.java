@@ -148,7 +148,7 @@ public class HashServer extends Thread {
 				byte[] recept = new byte[readBytes];
 				System.arraycopy(bbuf.array(), 0, recept, 0, readBytes);
 				receptBody = new String(recept).replaceAll(".*\r\n", "");
-				Log.log("[HashServer.Client.run()] receptBody: " + receptBody);
+//				Log.log("[HashServer.Client.run()] receptBody: " + receptBody);
 				if (!receptBody.equals("")) {
 					if ((report = MiningManager.verifyMining(receptBody, remoteIp)) != null) {
 						json = "{\"message\": \"report\"}";
@@ -167,8 +167,8 @@ public class HashServer extends Thread {
 						}
 					}
 				}
-				Log.loghr("[HashServer.Client.run()] recept -------------------------\n" + receptBody,
-						Constant.Log.TEMPORARY);
+//				Log.loghr("[HashServer.Client.run()] recept -------------------------\n" + receptBody,
+//						Constant.Log.TEMPORARY);
 				if (json.equals("")) {
 					json = "{\"target\": \"" + DatatypeConverter.printHexBinary(work.getTarget()) + "\", \"hash\": \""
 							+ DatatypeConverter.printHexBinary(work.getHash()) + "\", \"subTarget\": \""
@@ -178,10 +178,10 @@ public class HashServer extends Thread {
 							+ Constant.Server.NONCE_CNT + "\", \"algo\": \"" + Constant.Server.HASH_ALGO + "\"}";
 				}
 				pw.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json);
-				Log.loghr(
-						"[HashServer.Client.run()] send ---------------------------\n"
-								+ "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json,
-						Constant.Log.TEMPORARY);
+//				Log.loghr(
+//						"[HashServer.Client.run()] send ---------------------------\n"
+//								+ "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + json,
+//						Constant.Log.TEMPORARY);
 				pw.flush();
 				br.close();
 				pw.close();

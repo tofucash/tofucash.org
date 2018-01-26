@@ -38,7 +38,6 @@ public class DataManager {
 	}
 
 	static void updateMining(Block block) {
-		Log.log("[DataManager.updateMining()] blockHeader: " + block.getBlockHeader());
 		try {
 			work = new Work(Crypto.hash512(ByteUtil.getByteObject(block.getBlockHeader())), block.getTarget(), block.getSubTarget(), new byte[1]);
 			BackendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_WORK, work));
@@ -51,7 +50,19 @@ public class DataManager {
 		return work;
 	}
 	static Result verifyMining(Report report) {
-		return Verify.verifyMining(work, report);
+		Result result = Verify.verifyMining(work, report);
+		if(result == Result.TARGET || result == Result.SUB_TARGET) {
+			// マイニングに成功したなら、これ以上今のWorkでハッシュを計算してもらう必要がない
+			byte[] zero = new byte[Constant.Work.BYTE_MAX_HASH];
+			byte[] target = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_TARGET);
+			byte[] subTarget = DatatypeConverter.parseHexBinary(Constant.Block.DEFAULT_SUB_TARGET);
+			work = new Work(zero, target, subTarget, new byte[1]);
+//			BackendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_WORK, decoy));
+		} else {
+			// おかしいハッシュが来たなら正しい素材を渡し直す
+			updateMining(Blockchain.getBlock());
+		}
+		return result;
 	}
 	static boolean verifyRequest(Request request) {
 		return Verify.verifyRequest(request);
@@ -72,6 +83,7 @@ public class DataManager {
 		for (int i = 0; i < addrToStr.length; i++) {
 			addrTo[i] = DatatypeConverter.parseHexBinary(addrToStr[i]);
 		}
+
 		byte[][][] outHash = new byte[outHashStr.length][][];
 		for (int i = 0; i < outHashStr.length; i++) {
 			outHash[i] = new byte[outHashStr[i].length][];

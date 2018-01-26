@@ -11,6 +11,8 @@ public class Frontend {
 		hashServer.start();
 		DataManager dataManager = new DataManager();
 		dataManager.start();
+		MiningManager miningManager = new MiningManager();
+		miningManager.start();
 	}
 	static void init() {
 		Setting.init();

@@ -25,8 +25,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -34,7 +37,9 @@ import V1.Component.Block;
 import V1.Component.NetworkObject;
 import V1.Component.Node;
 import V1.Component.Request;
+import V1.Component.Spent;
 import V1.Component.Transaction;
+import V1.Component.UTXO;
 import V1.Component.Work;
 import V1.Library.Address;
 import V1.Library.ByteUtil;
@@ -55,6 +60,8 @@ public class BackendServer extends Thread {
 	private static Map<ByteBuffer, Set<String>> pbftTable;
 	private static Map<ByteBuffer, Set<String>> pbftHashTable;
 	private static Map<ByteBuffer, Block> blockTable;
+	private static List<ByteBuffer> requestListHashList;
+
 
 	static void init() throws Exception {
 		receptDataHashList = new ArrayList<byte[]>();
@@ -73,7 +80,8 @@ public class BackendServer extends Thread {
 		pbftTable = new HashMap<ByteBuffer, Set<String>>();
 		pbftHashTable = new HashMap<ByteBuffer, Set<String>>();
 		unreachableTable = new HashMap<String, Integer>();
-		blockTable = new HashMap<ByteBuffer ,Block>();
+		blockTable = new HashMap<ByteBuffer, Block>();
+		requestListHashList = new ArrayList<ByteBuffer>();
 		Log.log("Server init done.");
 	}
 
@@ -127,7 +135,7 @@ public class BackendServer extends Thread {
 						is = soc.getInputStream();
 						isr = new InputStreamReader(is);
 						baos = new ByteArrayOutputStream();
-						byte[] buffer = new byte[1024];
+						byte[] buffer = new byte[Constant.Server.SERVER_BUF];
 						int readBytes = -1;
 						byte[] data;
 						int available = is.available();
@@ -181,25 +189,29 @@ public class BackendServer extends Thread {
 			e.printStackTrace();
 			return;
 		}
-//		Log.log("[BackendServer.receptNetworkObject()] ip: "+remoteIp+", no: " + no, Constant.Log.TEMPORARY);
-//		Log.log("[BackendServer.receptNetworkObject()] AlreadyReceptRejectMode off", Constant.Log.TEMPORARY);
-//		try {
-//			byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
-//			if (ByteUtil.contains(receptDataHashList, hash)) {
-//				Log.log("[BackendServer.receptNetworkObject()] Already recept: "
-//						+ DatatypeConverter.printHexBinary(hash), Constant.Log.IMPORTANT);
-//				return;
-//			} else {
-//				receptDataHashList.add(hash);
-//				if (receptDataHashList.size() > Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
-//					receptDataHashList.remove(0);
-//				}
-//			}
-//		} catch (Exception e) {
-//			Log.log("[BackendServer.receptNetworkObject()] Invalid NetworkObject", Constant.Log.EXCEPTION);
-//			e.printStackTrace();
-//			return;
-//		}
+		// Log.log("[BackendServer.receptNetworkObject()] ip: "+remoteIp+", no:
+		// " + no, Constant.Log.TEMPORARY);
+		// Log.log("[BackendServer.receptNetworkObject()]
+		// AlreadyReceptRejectMode off", Constant.Log.TEMPORARY);
+		// try {
+		// byte[] hash = Crypto.hash256(ByteUtil.getByteObject(no));
+		// if (ByteUtil.contains(receptDataHashList, hash)) {
+		// Log.log("[BackendServer.receptNetworkObject()] Already recept: "
+		// + DatatypeConverter.printHexBinary(hash), Constant.Log.IMPORTANT);
+		// return;
+		// } else {
+		// receptDataHashList.add(hash);
+		// if (receptDataHashList.size() >
+		// Constant.Server.MAX_RECEPT_DATA_HASH_LIST) {
+		// receptDataHashList.remove(0);
+		// }
+		// }
+		// } catch (Exception e) {
+		// Log.log("[BackendServer.receptNetworkObject()] Invalid
+		// NetworkObject", Constant.Log.EXCEPTION);
+		// e.printStackTrace();
+		// return;
+		// }
 
 		if (no.getType() == Constant.NetworkObject.TYPE_TX
 				|| no.getType() == Constant.NetworkObject.TYPE_TX_BROADCAST) {
@@ -211,12 +223,17 @@ public class BackendServer extends Thread {
 			try {
 				byte[] blockHash = Crypto.hash512(ByteUtil.getByteObject(no));
 				ByteBuffer buf = ByteBuffer.wrap(blockHash);
+				// まだ受信したことがないブロック
 				if (!pbftTable.containsKey(buf)) {
+//					Log.log("A まだ受信したことがないブロック");
 					if (Blockchain.verifyBlock(no.getBlock(), null)) {
+//						Log.log("B ブロックの検証完了 pbftTableに追加してブロードキャスト");
 						pbftTable.put(buf, new HashSet<String>());
 						blockTable.put(buf, no.getBlock());
+						BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_BROADCAST, no.getBlock()));
 					}
 				} else {
+//					Log.log("C 既に受信したことがあるブロック/ブロックハッシュ");
 					Log.log("[BackendServer.receptNetworkObject()] Already recept block from other node");
 				}
 			} catch (Exception e) {
@@ -229,18 +246,24 @@ public class BackendServer extends Thread {
 			try {
 				byte[] blockHash = Crypto.hash512(ByteUtil.getByteObject(no));
 				ByteBuffer buf = ByteBuffer.wrap(blockHash);
+//				Log.log("D ブロードキャストを受信");
 				if (pbftTable.containsKey(buf)) {
+//					Log.log("E 受信したことがあるブロックなのでPBFT承認数を確認");
 					Set<String> set = pbftTable.get(buf);
-					if (!set.contains(remoteIp)) {
-						set.add(remoteIp);
-					}
-					if (set.size() == backendTable.size() / Constant.Blockchain.NODE_PBFT_RATE + 1) {
+					set.add(remoteIp);
+					if (!set.contains("TYPE_BLOCK_HASH") && set.size() >= backendTable.size() * Constant.Blockchain.NODE_PBFT_RATE) {
+//						Log.log("F 承認数が2/3を超えたのでブロックとして認める そしてハッシュを送信する");
+						set.add("TYPE_BLOCK_HASH");
 						BackendServer
 								.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_HASH, blockHash));
 					}
 				} else {
+					// TYPE_BLOCKを受信したときと同じ挙動
 					if (Blockchain.verifyBlock(no.getBlock(), null)) {
+//						Log.log("I ブロックの検証完了 pbftTableに追加してブロードキャスト");
 						pbftTable.put(buf, new HashSet<String>());
+						blockTable.put(buf, no.getBlock());
+						BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK_BROADCAST, no.getBlock()));
 					}
 				}
 			} catch (Exception e) {
@@ -251,37 +274,44 @@ public class BackendServer extends Thread {
 		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK_HASH) {
 			// マイニングを認めた他ノードがブロードキャストし合い、一定以上のコンセンサスを得たことの通知を受信
 			ByteBuffer buf = ByteBuffer.wrap(no.getHash());
-			if (pbftTable.containsKey(buf)) {
-				if (pbftHashTable.containsKey(buf)) {
-					Set<String> set = pbftHashTable.get(buf);
-					set.add(remoteIp);
-					if (set.size() > backendTable.size() / Constant.Blockchain.NODE_PBFT_RATE + 1) {
-						Blockchain.goToNextBlock(blockTable.get(buf));
-					}
-				} else {
-					Set<String> set = new HashSet<String>();
-					set.add(remoteIp);
-					pbftHashTable.put(buf, set);
+//			Log.log("G ブロックとして認めたいという連絡がきた");
+			if (pbftHashTable.containsKey(buf)) {
+				Set<String> set = pbftHashTable.get(buf);
+				set.add(remoteIp);
+				// +1はTYPE_BLOCK_HASHを追加した分
+				if (!set.contains("GO_TO_NEXT_BLOCK") && set.size() > backendTable.size() * Constant.Blockchain.NODE_PBFT_RATE + 1) {
+//					Log.log("H ブロックとして認めることにする");
+//					Log.log("このブロックを許可: " + DatatypeConverter.printHexBinary(buf.array()));
+					set.add("GO_TO_NEXT_BLOCK");
+//					Log.log("blockTable: ");
+//					for(Entry<ByteBuffer, Block> entry: blockTable.entrySet()) {
+//						Log.log("[hash: "+DatatypeConverter.printHexBinary(entry.getKey().array()) + ", blockHeader: "+entry.getValue().getBlockHeader()+"]");
+//					}
+					Blockchain.goToNextBlock(blockTable.get(buf));
 				}
+			} else {
+				Set<String> set = new HashSet<String>();
+				set.add(remoteIp);
+				pbftHashTable.put(buf, set);
 			}
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_BLOCK_CHECK) {
 			Block block = Blockchain.getBlock(no.getBlockHeight());
-			if(block != null) {
-				access(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK, block), frontendTable.get(remoteIp));				
+			if (block != null) {
+				access(new NetworkObject(Constant.NetworkObject.TYPE_BLOCK, block), frontendTable.get(remoteIp));
 			}
-			return ;
+			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_WORK_CHECK) {
 			Work currentWork = DataManager.getWork();
-			if(currentWork != no.getWork()) {
+			if (currentWork != no.getWork()) {
 				access(new NetworkObject(Constant.NetworkObject.TYPE_WORK, currentWork), frontendTable.get(remoteIp));
 			} else {
-				access(new NetworkObject(Constant.NetworkObject.TYPE_WORK, no.getWork()), frontendTable.get(remoteIp));
+//				access(new NetworkObject(Constant.NetworkObject.TYPE_WORK, no.getWork()), frontendTable.get(remoteIp));
 			}
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_NODE
 				|| no.getType() == Constant.NetworkObject.TYPE_NODE_BROADCAST) {
-			//　新しいノードの接続要求
+			// 新しいノードの接続要求
 			Blockchain.addNode(no);
 			if (remoteIp.equals(no.getNode().getIp())) {
 				backendTable.put(remoteIp, no.getNode());
@@ -299,29 +329,82 @@ public class BackendServer extends Thread {
 				|| no.getType() == Constant.NetworkObject.TYPE_REQUEST_BROADCAST) {
 			// 様々なリクエストが来た（F層から）
 			// verify request signature
+			Log.log("REQUEST UPDATE!", Constant.Log.STRONG);
 			List<Request> requestList = new ArrayList<Request>(Arrays.asList(no.getRequest()));
+			ByteBuffer buf;
+			try {
+				buf = ByteBuffer.wrap(Crypto.hash512(ByteUtil.getByteObject(no.getRequest())));
+			} catch (Exception e) {
+				e.printStackTrace();
+				Log.log("Invalid Request", Constant.Log.INVALID);
+				return ;
+			}
+			if(requestListHashList.contains(buf)) {
+				Log.log("[BackendServer.receptNetworkObject()] Request already recept", Constant.Log.STRONG);
+				return ;
+			}
+			requestListHashList.add(buf);
 			for (Iterator<Request> it = requestList.iterator(); it.hasNext();) {
 				Request request = it.next();
 				if (DataManager.verifyRequest(request)) {
-					if (no.getType() == Constant.NetworkObject.TYPE_REQUEST && Blockchain
-							.addTransaction(DataManager.makeTx(request))) {
+					if (Blockchain.addTransaction(DataManager.makeTx(request))) {
 					} else {
 						it.remove();
-						Log.log("[BackendServer.receptNetworkObject()] Request invalid", Constant.Log.INVALID);
+						Log.log("[BackendServer.receptNetworkObject()] Request invalid: " + no.getType(), Constant.Log.INVALID);
 					}
 				} else {
 					it.remove();
 					Log.log("[BackendServer.receptNetworkObject()] Request signature invalid", Constant.Log.INVALID);
 				}
 			}
-			if (requestList.size() > 0) {
-				BackendServer.shareBackend(
-						new NetworkObject(Constant.NetworkObject.TYPE_REQUEST_BROADCAST, requestList.toArray(new Request[requestList.size()])));
+			if (requestList.size() > 0 && no.getType() == Constant.NetworkObject.TYPE_REQUEST) {
+				BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST_BROADCAST, no.getRequest()));
+//				BackendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST_BROADCAST,
+//						requestList.toArray(new Request[requestList.size()])));
 			}
 			return;
 		} else if (no.getType() == Constant.NetworkObject.TYPE_UTXO_CHECK) {
-			access(new NetworkObject(Constant.NetworkObject.TYPE_UTXO, Blockchain.getUTXO()), frontendTable.get(remoteIp));
-			return ;
+			if (no.getBlockHeight() == Constant.NetworkObject.VALUE_ALL) {
+				access(new NetworkObject(Constant.NetworkObject.TYPE_UTXO, Blockchain.getUTXO()),
+						frontendTable.get(remoteIp));
+				// byte[] utxo;
+				// try {
+				// utxo = ByteUtil.getByteObject(Blockchain.getUTXO());
+				// byte[] output = new byte[1024 * 1024];
+				// Deflater compresser = new Deflater();
+				// compresser.setInput(utxo);
+				// compresser.finish();
+				// int compressedDataLength = compresser.deflate(output);
+				// compresser.end();
+				// byte[] data = new byte[compressedDataLength];
+				// System.arraycopy(output, 0, data, 0, compressedDataLength);
+				// NetworkObject retNo = new
+				// NetworkObject(Constant.NetworkObject.TYPE_UTXO_BYTE, null);
+				// retNo.setUtxoByte(output, utxo.length);
+				// Log.log("data: " +
+				// DatatypeConverter.printHexBinary(output).substring(0, 20));
+				// access(retNo, frontendTable.get(remoteIp));
+				// return;
+				// } catch (Exception e) {
+				// e.printStackTrace();
+				// }
+				return;
+			} else if (no.getBlockHeight() == Constant.NetworkObject.VALUE_DIFF) {
+				NetworkObject retNo = new NetworkObject(Constant.NetworkObject.TYPE_UTXO_SPENT_HASH, null);
+				List<UTXO> appendList = Blockchain.getUTXOLastList();
+				UTXO utxo = new UTXO();
+				for (UTXO tmp : appendList) {
+					utxo.addAll(tmp.getAll());
+				}
+				List<Spent> removeList = Blockchain.getSpentLast();
+				Spent spent = new Spent();
+				for (Spent tmp : removeList) {
+					spent.addAll(tmp.getAll());
+				}
+				retNo.setUtxoSpentHash(utxo, spent, Blockchain.getUTXOTableHash());
+				access(retNo, frontendTable.get(remoteIp));
+				return;
+			}
 		}
 		Log.log("[BackendServer.receptNetworkObject()] Recept invalid data from [" + remoteIp + "]: " + no,
 				Constant.Log.EXCEPTION);
@@ -332,11 +415,12 @@ public class BackendServer extends Thread {
 			Log.log("BROADCAST_BACKEND false");
 			return;
 		}
-		Log.log("[FrontendServer.shareBackend()] no: " + no, Constant.Log.TEMPORARY);
+		// Log.log("[FrontendServer.shareBackend()] no: " + no,
+		// Constant.Log.TEMPORARY);
 		for (Iterator<Node> it = backendTable.values().iterator(); it.hasNext();) {
 			if (access(no, it.next()) == null) {
 				Log.log("[share--end] 3count after remove");
-//				it.remove();
+				// it.remove();
 			}
 		}
 	}
@@ -347,11 +431,12 @@ public class BackendServer extends Thread {
 			Log.log("BROADCAST_FRONTEND false");
 			return;
 		}
-		Log.log("[FrontendServer.shareFrontend()] no: " + no, Constant.Log.TEMPORARY);
+		// Log.log("[FrontendServer.shareFrontend()] no: " + no,
+		// Constant.Log.TEMPORARY);
 		for (Iterator<Node> it = frontendTable.values().iterator(); it.hasNext();) {
 			if (access(no, it.next()) == null) {
 				Log.log("[share--end] 3count after remove");
-//				it.remove();
+				// it.remove();
 			}
 		}
 	}
@@ -362,7 +447,8 @@ public class BackendServer extends Thread {
 
 		try {
 			InetSocketAddress socketAddress = new InetSocketAddress(node.getIp(), node.getPort());
-			socket.connect(socketAddress, 30000);
+			socket.connect(socketAddress, Constant.Server.TIMEOUT);
+			socket.setSoTimeout(Constant.Server.TIMEOUT);
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			ObjectOutputStream oos = null;
@@ -385,12 +471,13 @@ public class BackendServer extends Thread {
 			InputStreamReader ir1 = new InputStreamReader(is1, "UTF-8");
 			BufferedReader br1 = new BufferedReader(ir1);
 
-			while (is1.available() == 0)
-				;
-
-			char[] cline = new char[is1.available()];
-			br1.read(cline);
-			Log.log("[BackendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+//			while (is1.available() == 0)
+//				;
+//
+//			char[] cline = new char[is1.available()];
+//			br1.read(cline);
+//			Log.log("[BackendServer.broadcast()] recept: " + new String(cline), Constant.Log.TEMPORARY);
+//			Log.log("[FrontendServer.broadcast()] connect: " + node, Constant.Log.TEMPORARY);
 
 			baos.close();
 			oos.close();
@@ -400,9 +487,9 @@ public class BackendServer extends Thread {
 			is1.close();
 
 			socket.close();
-			return cline;
+			return new char[1];
 		} catch (Exception e) {
-			e.printStackTrace();
+//			e.printStackTrace();
 			Log.log("[BackendServer.broadcast()] Cannot connection and detach: " + node.getIp() + ":" + node.getPort(),
 					Constant.Log.IMPORTANT);
 			return null;

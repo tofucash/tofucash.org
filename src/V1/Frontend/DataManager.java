@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -24,6 +25,7 @@ import V1.Component.UTXO;
 import V1.Library.Base58;
 import V1.Library.ByteUtil;
 import V1.Library.Constant;
+import V1.Library.Crypto;
 import V1.Library.Log;
 import V1.Library.TofuException.AddressFormatException;
 import V1.Library.Verify;
@@ -32,7 +34,7 @@ import net.arnx.jsonic.JSON;
 public class DataManager extends Thread {
 	private static UTXO utxoTable;
 	// nextBlockのutxoの消費差分
-	private static UTXO utxoTableUsed;
+	private static Spent utxoTableUsed;
 	private static Map<ByteBuffer, Map<ByteBuffer, String>> txInfoTable;
 
 	private static Map<String, Map<String, String>> myRoutineTable;
@@ -42,7 +44,7 @@ public class DataManager extends Thread {
 
 	static void init() {
 		utxoTable = new UTXO();
-		utxoTableUsed = new UTXO();
+		utxoTableUsed = new Spent();
 		txInfoTable = new HashMap<ByteBuffer, Map<ByteBuffer, String>>();
 		myRoutineTable = new HashMap<String, Map<String, String>>();
 		routineTable = new HashMap<String, Map<String, String>>();
@@ -82,17 +84,33 @@ public class DataManager extends Thread {
 		return JSON.encode(hashBalance);
 	}
 
-	static void addUTXO(UTXO utxoNew) {
-		Log.log("古いUTXO: " + utxoTable.toExplainString());
-		Log.log("新しいUTXO: " + utxoNew.toExplainString());
+	static void overwriteUTXO(UTXO utxoNew) {
+//		Log.log("古いUTXO: " + utxoTable.toExplainString());
+//		Log.log("新しいUTXO: " + utxoNew.toExplainString());
 		utxoTable = utxoNew;
 //		utxoTable.addAll(utxoNew.getAll());
 		utxoTableUsed.clear();
 	}
-
-	static void addUTXORemove(Spent[] spentList) {
-		// TODO: something
-		Log.log("[UTXO.addUTXORemove()] Update utxoTable: " + utxoTable, Constant.Log.TEMPORARY);
+	static void updateUTXO(UTXO utxoNew, Spent spentNew) {
+		utxoTable.removeAll(spentNew.getAll());
+		utxoTable.addAll(utxoNew.getAll());
+		
+//		utxoTable.checkAndRemoveAll(spentNew.getAll());
+//		utxoTable.checkAndAddAll(utxoNew.getAll());
+		utxoTableUsed.clear();
+	}
+	static boolean checkUTXOHash(byte[] utxoHashNew) {
+		ByteBuffer utxoHashBuf;
+		try {
+			utxoHashBuf = ByteBuffer.wrap(Crypto.hash512(ByteUtil.getByteObject(utxoTable)));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		ByteBuffer utxoHashNewBuf = ByteBuffer.wrap(utxoHashNew);
+		Log.log("utxoHashOldBuf: " + DatatypeConverter.printHexBinary(utxoHashBuf.array()));
+		Log.log("utxoHashNewBuf: " + DatatypeConverter.printHexBinary(utxoHashNew));
+		return utxoHashBuf.equals(utxoHashNewBuf);
 	}
 
 	static boolean balanceEnough(Request request) {
@@ -101,16 +119,16 @@ public class DataManager extends Thread {
 			for (int i = 0; i < outHashList.length; i++) {
 				byte[] addressFrom = DatatypeConverter.parseHexBinary(request.addrFrom[i]);
 				ByteBuffer adderssBuf = ByteBuffer.wrap(addressFrom);
-				Map<ByteBuffer, Output> utxoMapUsed = utxoTableUsed.get(adderssBuf);
+				Set<ByteBuffer> utxoMapUsed = utxoTableUsed.get(adderssBuf);
 				Map<ByteBuffer, Output> utxoMap = utxoTable.get(adderssBuf);
 				for (String outHash : outHashList[i]) {
 					ByteBuffer outHashBuf = ByteBuffer.wrap(DatatypeConverter.parseHexBinary(outHash));
-					if (utxoMapUsed != null && utxoMapUsed.containsKey(outHashBuf)) {
+					if (utxoMapUsed != null && utxoMapUsed.contains(outHashBuf)) {
 						Log.log("[DataManager.balanceEnough()] UTXO already used");
 						return false;
 					}
 					if (utxoMap != null && utxoMap.containsKey(outHashBuf)) {
-						utxoTableUsed.add(addressFrom, utxoMap.get(outHashBuf));
+						utxoTableUsed.add(ByteBuffer.wrap(addressFrom), ByteBuffer.wrap(DatatypeConverter.parseHexBinary(outHash)));
 					} else {
 						Log.log("[DataManager.balanceEnough()] UTXO does not exists");
 						return false;
@@ -255,16 +273,14 @@ public class DataManager extends Thread {
 	}
 
 	synchronized static void addRequestPool(Request request) {
-		synchronized (requestTable) {
-			requestTable.add(request);
-		}
+		requestTable.add(request);
 	}
 
 	public void run() {
 		new RequestNotifyer().start();
-		new UpdateChecker().start();
 	}
 
+	private final static Object REQUEST_TABLE_LOCK = new Object();
 	class RequestNotifyer extends Thread {
 		public void run() {
 			byte[] last = new byte[1];
@@ -287,40 +303,19 @@ public class DataManager extends Thread {
 		}
 
 		private void notifyRequest() {
-			synchronized (requestTable) {
-				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST,
+			synchronized (REQUEST_TABLE_LOCK) {
+//				FrontendServer.shareBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST,
+//						requestTable.toArray(new Request[requestTable.size()])));
+				FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_REQUEST, 
 						requestTable.toArray(new Request[requestTable.size()])));
-				Spent[] spentList = new Spent[requestTable.size()];
-				int i = 0;
-				for (Request request : requestTable) {
-					spentList[i++] = new Spent(request.getAddrFrom(), request.getAddrFrom());
-				}
-				FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_SPENT, spentList));
+//				Spent[] spentList = new Spent[requestTable.size()];
+//				int i = 0;
+//				for (Request request : requestTable) {
+//					spentList[i++] = new Spent(request.getAddrFrom(), request.getAddrFrom());
+//				}
+//				FrontendServer.shareFrontend(new NetworkObject(Constant.NetworkObject.TYPE_SPENT, spentList));
 				requestTable.clear();
 			}
-		}
-	}
-
-	class UpdateChecker extends Thread {
-		public void run() {
-			byte[] last = new byte[1];
-			byte[] current;
-			while(true) {
-				try {
-					Thread.sleep(Constant.Manager.UPDATE_CHECKER_INTERVAL);
-					current = ByteUtil.getByteObject(MiningManager.getWork());
-					if(!Arrays.equals(current, last)) {
-						checkUpdate();						
-					}
-					last = current;
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		}
-
-		private void checkUpdate() throws Exception {
-			FrontendServer.inquiryBackend(new NetworkObject(Constant.NetworkObject.TYPE_WORK_CHECK, MiningManager.getWork()));
 		}
 	}
 }

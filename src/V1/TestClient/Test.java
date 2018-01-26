@@ -8,6 +8,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -30,7 +32,38 @@ import net.arnx.jsonic.web.WebServiceServlet.JSON;
 
 public class Test {
 	public static void main(String[] args) {
-		Log.log("00: " + Base58.encode(new byte[512]));
+		 try {
+		     // Encode a String into bytes
+		     String inputString = "blaafsd;lkjfa;sldkfja;lskdfja;lskfja;lskdjf;alksdjf;laksjdf;laksdjf;lak3j2;ofjia;sldkcm/a.x,calkesj;fl2;oiefjalksdmf/ca.s,dmfh2oerji;lawueafjlkcsdjx;hblahblah0000";
+		     byte[] input = inputString.getBytes("UTF-8");
+
+		     // Compress the bytes
+		     byte[] output = new byte[1000];
+		     Deflater compresser = new Deflater();
+		     compresser.setInput(input);
+		     compresser.finish();
+		     int compressedDataLength = compresser.deflate(output);
+		     compresser.end();
+		     
+		     Log.log("datalength: " + inputString.getBytes().length);
+		     Log.log("length: " + compressedDataLength);
+		     Log.log("length: " + DatatypeConverter.printHexBinary(output));
+
+		     // Decompress the bytes
+		     Inflater decompresser = new Inflater();
+		     decompresser.setInput(output, 0, compressedDataLength);
+		     byte[] result = new byte[input.length];
+		     int resultLength = decompresser.inflate(result);
+		     decompresser.end();
+
+		     // Decode the bytes into a String
+		     String outputString = new String(result, 0, resultLength, "UTF-8");
+		     Log.log("output: " + outputString);
+		 } catch(java.io.UnsupportedEncodingException ex) {
+		     // handle
+		 } catch (java.util.zip.DataFormatException ex) {
+		     // handle
+		 }
 	}
 	public static void addressCheck() {
 		byte[] receiver1;

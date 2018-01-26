@@ -31,22 +31,56 @@ public class Block implements Externalizable {
 
 	private List<byte[]> merkleTree;
 	private List<byte[]> txHashList;
+	private Object txListLock;
 
 	public Block() {
 		header = null;
 		txList = null;
 		merkleTree = null;
 		txHashList = null;
+		txListLock = new Object();
 	}
+
 	public Block(int blockHeight) {
 		txList = new Transaction[Constant.Block.MAX_TX];
 		merkleTree = new ArrayList<byte[]>();
 		txHashList = new ArrayList<byte[]>();
-		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, new byte[1],
-				0, new byte[Constant.Address.BYTE_ADDRESS], new byte[1], new byte[1]);
+		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, new byte[1], 0,
+				new byte[Constant.Address.BYTE_ADDRESS], new byte[1], new byte[1]);
+		txListLock = new Object();
 	}
-	
-	public synchronized boolean addTransaction(Transaction tx) {
+
+	// genesisblockのため
+	public Block(int blockHeight, byte[] prevBlockHash, byte[] target, byte[] subTarget) {
+		txList = new Transaction[Constant.Block.MAX_TX];
+		merkleTree = new ArrayList<byte[]>();
+		txHashList = new ArrayList<byte[]>();
+		header = new BlockHeader(Constant.BlockHeader.VERSION, blockHeight, prevBlockHash, 0,
+				new byte[Constant.Address.BYTE_ADDRESS], target, subTarget);
+		txListLock = new Object();
+	}
+
+	public boolean addTransaction(Transaction tx) {
+		synchronized (txListLock) {
+			try {
+				txHashList.add(Crypto.hash256(ByteUtil.getByteObject(tx)));
+			} catch (Exception e) {
+				e.printStackTrace();
+				Log.log("[Block.addTransaction()] Invalid data", Constant.Log.EXCEPTION);
+				return false;
+			}
+			if (!MerkleTree.updateMerkleTree(merkleTree, txHashList)) {
+				merkleTree.remove(merkleTree.size() - 1);
+				return false;
+			}
+			header.updateMerkleRoot(merkleTree.get(0));
+			txList[header.getTxCnt()] = tx;
+			header.incrementTx();
+			return true;
+		}
+	}
+
+	private boolean addTransactionNotLock(Transaction tx) {
 		try {
 			txHashList.add(Crypto.hash256(ByteUtil.getByteObject(tx)));
 		} catch (Exception e) {
@@ -64,6 +98,24 @@ public class Block implements Externalizable {
 		return true;
 	}
 
+	public synchronized void removeInvalidTx(int index) {
+		synchronized (txListLock) {
+			header.resetTxCnt();
+			Transaction[] txListOld = new Transaction[Constant.Block.MAX_TX];
+			txList = new Transaction[Constant.Block.MAX_TX];
+			merkleTree = new ArrayList<byte[]>();
+			txHashList = new ArrayList<byte[]>();
+			for (int i = 0; i < Constant.Block.MAX_TX; i++) {
+				if (i == index) {
+					continue;
+				}
+				if (txListOld == null) {
+					return;
+				}
+				addTransactionNotLock(txListOld[i]);
+			}
+		}
+	}
 
 	public BlockHeader getBlockHeader() {
 		return header;
@@ -76,40 +128,51 @@ public class Block implements Externalizable {
 	public int getBlockHeight() {
 		return header.getBlockHeight();
 	}
+	public int getTxCnt() {
+		return header.getTxCnt();
+	}
 
 	public Transaction[] getTxList() {
 		return txList;
 	}
+
 	public byte[] getTarget() {
 		return header.getTarget();
 	}
+
 	public byte[] getSubTarget() {
 		return header.getSubTarget();
 	}
+
 	public long getTimestamp() {
 		return header.getTimestamp();
 	}
+
 	public void nonceFound(byte[] nonce, byte[] miner, byte[] blockHash) {
 		header.nonceFound(nonce, miner, blockHash);
 	}
-	
+
 	public byte[] getBlockHash() {
 		return header.getBlockHash();
 	}
+
 	public byte[] getNonce() {
 		return header.getNonce();
 	}
+
 	public byte[] getMiner() {
 		return header.getMiner();
 	}
+
 	public void resetNonce() {
 		header.resetNonce();
 	}
+
 	public void updateHeader(byte[] prevBlockHash, byte[] target, byte[] subTarget) {
 		long timestamp = Time.getTimestamp();
 		header.updateParam(timestamp, prevBlockHash, target, subTarget);
 	}
-	
+
 	public void removeNull() {
 		List<Transaction> txListAsList = new ArrayList<Transaction>(Arrays.asList(txList));
 		txListAsList.removeAll(Collections.singleton(null));
@@ -120,7 +183,7 @@ public class Block implements Externalizable {
 	public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {
 		header = (BlockHeader) oi.readObject();
 		txList = new Transaction[header.getTxCnt()];
-		for(int i = 0; i < header.getTxCnt(); i++) {
+		for (int i = 0; i < header.getTxCnt(); i++) {
 			txList[i] = (Transaction) oi.readObject();
 		}
 		// for(int i = 0; i < txCnt; i++) {
@@ -139,7 +202,7 @@ public class Block implements Externalizable {
 		// oo.writeInt(data.length);
 		// oo.write(data);
 		// }
-		for(int i = 0; i < txList.length; i++) {
+		for (int i = 0; i < txList.length; i++) {
 			oo.writeObject(txList[i]);
 		}
 	}

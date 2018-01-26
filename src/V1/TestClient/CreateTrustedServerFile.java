@@ -12,30 +12,36 @@ import V1.Library.Log;
 
 public class CreateTrustedServerFile {
 	public static void main(String[] args) {
+		if (args.length != 3) {
+			Log.log("usage: java CreateTrustedServerFile \"f\"/\"b\" \"XX.XX.XX.XX\" \"nodeName\"");
+			return;
+		}
 		try {
 			Setting.init();
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
 			e.printStackTrace();
 			return;
 		}
-		makeTrustedServerFile();
-	}
-	static void makeTrustedServerFile() {
 		String fileName, ip, nodeName, dirName;
 		Node node;
-//		dirName = "frontendServer";
-		dirName = "backendServer";
-		ip = "133.18.56.150";
-//		ip = "36.55.231.15";
+		if (args[0].equals("b")) {
+			dirName = "backendServer";
+		} else if (args[0].equals("f")) {
+			dirName = "frontendServer";
+		} else {
+			Log.log("usage: java CreateTrustedServerFile \"f\"/\"b\" \"XX.XX.XX.XX\" \"nodeName\"");
+			return;
+		}
+		ip = args[1];
+		nodeName = args[2];
 		fileName = ip + ".conf";
-		nodeName = "vps5";
 		node = new Node(ip, Constant.Server.SERVER_PORT, nodeName, Setting.getAddress(), Setting.getKeyPair());
 
 		try {
-			IO.fileWrite(System.getProperty("user.dir") + File.separator + "data" + File.separator + dirName
+			IO.fileWrite(System.getProperty("user.dir") + File.separator + ".." + File.separator + "data" + File.separator + dirName
 					+ File.separator, fileName, ByteUtil.getByteObject(node));
-			Log.log(ByteUtil.convertByteToObject(
-					IO.readFileToByte(System.getProperty("user.dir") + File.separator + "data" + File.separator + dirName + File.separator + fileName)));
+			Log.log(ByteUtil.convertByteToObject(IO.readFileToByte(System.getProperty("user.dir") + File.separator
+					+ ".." + File.separator + "data" + File.separator + dirName + File.separator + fileName)));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
